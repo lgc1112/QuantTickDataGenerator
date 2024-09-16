@@ -165,6 +165,9 @@ struct RawSnapShort
     char instrumentId[32]; // 合约代码
     char tradingDay[9];    // 成交日期
 
+    char updateTime[9];        // 交易所发布时间（时分秒）
+    int updateMillisec = 0;    // 交易所发布时间（毫秒字段）
+
     char refUpdateTime[9]; // 本地接收到消息的时间（时分秒）
     int refUpdateMicrosec; // 本地接收到消息的时间（微秒字段）
 
@@ -191,6 +194,7 @@ struct RawSnapShort
     std::string ToString() const
     {
         return std::string("instrumentId:") + instrumentId + ", tradingDay:" + tradingDay +
+               ", updateTime:" + updateTime + ", updateMillisec:" + std::to_string(updateMillisec) +
                ", refUpdateTime:" + refUpdateTime + ", refUpdateMicrosec:" + std::to_string(refUpdateMicrosec) +
                ", lastPrice:" + std::to_string(lastPrice) + ", volume:" + std::to_string(volume) +
                ", lastVolume:" + std::to_string(lastVolume) + ", turnover:" + std::to_string(turnover) +
@@ -272,7 +276,7 @@ inline void Transaction::FromRawTransaction(const RawTransaction &rawTransaction
     orderPrice = rawTransaction.tradePrice;
     orderVolume = rawTransaction.tradeVolume;
     isBuy = rawTransaction.direction == '1';
-    orderID = rawTransaction.tradeId;
+    orderID = isBuy ? rawTransaction.bidOrderID : rawTransaction.askOrderID;
     isCancel = rawTransaction.functionCode == 'C';
 }
 

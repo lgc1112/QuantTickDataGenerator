@@ -6,67 +6,53 @@
  * @edit: regangcli
  * @brief: 
  */
-#include "transaction_mgr.h"
+#include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <system_error>
+#include <unordered_map>
+#include <climits>
 
-
-inline int TransactionMgr::Init(const std::string &path) {
-    
-}
+#include "transaction_mgr.h"
+#include "logger.h"
 
 void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
 {
     std::ofstream file(filename);
-    
-    if (!file.is_open()) {
-        std::cout << "Unable to open file for writing." << std::endl;
+
+    if (!file)
+    {
+        std::error_code ec(errno, std::generic_category());
+        LOG_ERROR("Error opening file %s, err:%s'", filename.c_str(), ec.message().c_str());
         return;
     }
 
     // 写入 CSV 文件头部
-    file << "InstrumentID,TradingDay,RefUpdateTime,RefUpdateMillisec,LastPrice,Volume,LastVolume,Turnover,LastTurnover,"
+    file << "InstrumentID,TradingDay,UpdateTime,UpdateMillisec,RefUpdateTime,RefUpdateMillisec,LastPrice,Volume,"
+            "LastVolume,Turnover,LastTurnover,"
          << "AskPrice5,AskPrice4,AskPrice3,AskPrice2,AskPrice1,BidPrice1,BidPrice2,BidPrice3,BidPrice4,BidPrice5,"
-         << "AskVolume5,AskVolume4,AskVolume3,AskVolume2,AskVolume1,BidVolume1,BidVolume2,BidVolume3,BidVolume4,BidVolume5,"
+         << "AskVolume5,AskVolume4,AskVolume3,AskVolume2,AskVolume1,BidVolume1,BidVolume2,BidVolume3,BidVolume4,"
+            "BidVolume5,"
          << "OpenInterest,UpperLimitPrice,LowerLimitPrice,HighestPrice,LowestPrice,PreClosePrice\n";
 
     // 遍历数组并写入每个快照
-    for (const auto& snapshot : snapShorts_) {
-        file << snapshot.instrumentId << ","
-             << snapshot.tradingDay << ","
-             << snapshot.refUpdateTime << ","
-             << snapshot.refUpdateMicrosec << ","
-             << snapshot.lastPrice << ","
-             << snapshot.volume << ","
-             << snapshot.lastVolume << ","
-             << snapshot.turnover << ","
-             << snapshot.lastTurnover << ","
-             << snapshot.askPrice5 << ","
-             << snapshot.askPrice4 << ","
-             << snapshot.askPrice3 << ","
-             << snapshot.askPrice2 << ","
-             << snapshot.askPrice1 << ","
-             << snapshot.bidPrice1 << ","
-             << snapshot.bidPrice2 << ","
-             << snapshot.bidPrice3 << ","
-             << snapshot.bidPrice4 << ","
-             << snapshot.bidPrice5 << ","
-             << snapshot.askVolume5 << ","
-             << snapshot.askVolume4 << ","
-             << snapshot.askVolume3 << ","
-             << snapshot.askVolume2 << ","
-             << snapshot.askVolume1 << ","
-             << snapshot.bidVolume1 << ","
-             << snapshot.bidVolume2 << ","
-             << snapshot.bidVolume3 << ","
-             << snapshot.bidVolume4 << ","
-             << snapshot.bidVolume5 << ","
-             << snapshot.openInterest << ","
-             << snapshot.upperLimitPrice << ","
-             << snapshot.lowerLimitPrice << ","
-             << snapshot.highestPrice << ","
-             << snapshot.lowestPrice << ","
-             << snapshot.preClosePrice << "\n";
+    for (const auto &snapshot : snapShorts_)
+    {
+        file << "SZ127080"
+             << "," << 20230619 << "," << snapshot.updateTime << "," << std::setw(3) << std::setfill('0')
+             << snapshot.updateMillisec << ","
+             << "0"
+             << "," << std::setw(3) << std::setfill('0') << snapshot.refUpdateMicrosec << "," << snapshot.lastPrice
+             << "," << snapshot.volume << "," << snapshot.lastVolume << "," << snapshot.turnover << ","
+             << snapshot.lastTurnover << "," << snapshot.askPrice5 << "," << snapshot.askPrice4 << ","
+             << snapshot.askPrice3 << "," << snapshot.askPrice2 << "," << snapshot.askPrice1 << ","
+             << snapshot.bidPrice1 << "," << snapshot.bidPrice2 << "," << snapshot.bidPrice3 << ","
+             << snapshot.bidPrice4 << "," << snapshot.bidPrice5 << "," << snapshot.askVolume5 << ","
+             << snapshot.askVolume4 << "," << snapshot.askVolume3 << "," << snapshot.askVolume2 << ","
+             << snapshot.askVolume1 << "," << snapshot.bidVolume1 << "," << snapshot.bidVolume2 << ","
+             << snapshot.bidVolume3 << "," << snapshot.bidVolume4 << "," << snapshot.bidVolume5 << ","
+             << snapshot.openInterest << "," << snapshot.upperLimitPrice << "," << snapshot.lowerLimitPrice << ","
+             << snapshot.highestPrice << "," << snapshot.lowestPrice << "," << snapshot.preClosePrice << "\n";
     }
 
     file.close();
@@ -78,13 +64,13 @@ void TransactionMgr::OnReceiveOrder(void *data)
     auto order = static_cast<Order *>(data);
     if (curOrders_.find(order->orderID) != curOrders_.end())
     {
-        printf("order id error");
+        LOG_ERROR1("order id error");
         return;
     }
 
     curOrders_.emplace(order->orderID, order);
+    // LOG_DEBUG("order: %lld, refUpdateTimeSpan:%lld", order->orderID, order->refUpdateTimeSpan);
 
-    
     // std::cout << count << ": " << order->ToString() << std::endl;
     // if (++count == 10)
     //     exit(0);
@@ -98,7 +84,7 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     // 撤单比订单先到了
     if (it == curOrders_.end())
     {
-        printf("pending!");
+        LOG_WARN("pending: %lld", transaction->orderID);
         pendingCancelTransactions_.emplace(transaction->orderID, transaction);
         return;
     }
@@ -106,7 +92,7 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     auto remainVolume = it->second->orderVolume - transaction->orderVolume;
     if (remainVolume < 0)
     {
-        printf("err remainVolume!");
+        LOG_ERROR1("err remainVolume!");
         return;
     }
 
@@ -120,6 +106,21 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     {
         it->second->orderVolume = remainVolume;
     }
+
+
+    // 超时，需要tick
+    int secondsInDay = (transaction->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
+    secondsInDay = 14 * 3600 + 57 * 60;
+    int nextTick = _GetNextTickTimeSpan();
+    while (secondsInDay >= nextTick)
+    {
+        // LOG_INFO("tickTimeSpan_: %d(%d:%d:%d)", tickTimeSpan_, tickTimeSpan_ / 3600, tickTimeSpan_/ 60 % 60, tickTimeSpan_ % 60);
+        OnTick();
+        tickTimeSpan_ = nextTick;
+        nextTick = _GetNextTickTimeSpan();
+    }
+    // LOG_INFO("tickTimeSpan_: %d, nextTick: %d", secondsInDay, nextTick);
+    // exit(0);
 
     // 如果是购买成交，记录快照
     if (!transaction->isCancel && transaction->isBuy)
@@ -136,9 +137,9 @@ void TransactionMgr::OnReceiveTransaction(void *data)
         snapShort.lastTurnover += turnover;
     }
 
-    std::cout << count << ": "  << transaction->ToString() << std::endl;
-    if (++count == 10)
-        exit(0);
+    // std::cout << count << "Recv Transaction : "  << transaction->ToString() << std::endl;
+    // if (++count == 10)
+    //     exit(0);
 }
 
 void TransactionMgr::OnTick()
@@ -260,4 +261,88 @@ void TransactionMgr::OnTick()
     // 清理快照信息
     snapShorts_.back().lastVolume = 0;
     snapShorts_.back().lastPrice = 0;
+}
+
+// 打点时间
+// 9:25:00
+// 9:25:03
+// 9:26:30
+// 9:27:30
+// 9:28:30
+// 9:29:30
+// 9:30:03
+
+// （9:30:00 -> 11:30:] 每3s一个tick
+
+// 11:30:03
+// 11:40:30
+// 11:51:30
+// 12:00:30
+// 12:11:30
+// 12:22:30
+// 12:33:30
+// 12:44:30
+// 12:55:30  13:00:03
+
+// (13:00:00 14:57:00】 每3s一个tick
+int TransactionMgr::_GetNextTickTimeSpan()
+{
+    // 特殊tick映射
+    static std::unordered_map<int, int> nextTickSpanMap = {
+        // 9:25:00
+        // 9:25:03
+        // 9:26:30
+        // 9:27:30
+        // 9:28:30
+        // 9:29:30
+        // 9:30:03
+        {9 * 3600 + 25 * 60 + 0, 9 * 3600 + 25 * 60 + 3}, 
+        {9 * 3600 + 25 * 60 + 3, 9 * 3600 + 26 * 60 + 30},
+        {9 * 3600 + 26 * 60 + 30, 9 * 3600 + 27 * 60 + 30}, 
+        {9 * 3600 + 27 * 60 + 30, 9 * 3600 + 28 * 60 + 30}, 
+        {9 * 3600 + 28 * 60 + 30, 9 * 3600 + 29 * 60 + 30}, 
+        {9 * 3600 + 29 * 60 + 30, 9 * 3600 + 30 * 60 + 3}, 
+        
+        // 11:30:00
+        // 11:30:03
+        // 11:40:30
+        // 11:51:30
+        // 12:00:30
+        // 12:11:30
+        // 12:22:30
+        // 12:33:30
+        // 12:44:30
+        // 12:55:30  13:00:03
+        {11 * 3600 + 30 * 60 + 0, 11 * 3600 + 30 * 60 + 3}, 
+        {11 * 3600 + 30 * 60 + 3, 11 * 3600 + 40 * 60 + 30},
+        {11 * 3600 + 40 * 60 + 30, 11 * 3600 + 51 * 60 + 30}, 
+        {11 * 3600 + 51 * 60 + 30, 12 * 3600 + 0 * 60 + 30}, 
+        {12 * 3600 + 0 * 60 + 30, 12 * 3600 + 11 * 60 + 30}, 
+        {12 * 3600 + 11 * 60 + 30, 12 * 3600 + 22 * 60 + 30},
+        {12 * 3600 + 22 * 60 + 30, 12 * 3600 + 33 * 60 + 30},
+        {12 * 3600 + 33 * 60 + 30, 12 * 3600 + 44 * 60 + 30}, 
+        {12 * 3600 + 44 * 60 + 30, 12 * 3600 + 55 * 60 + 30}, 
+        {12 * 3600 + 55 * 60 + 30, 13 * 3600 + 00 * 60 + 3}, 
+
+    };
+
+    // （9:30:00 -> 11:30:] (13:00:00 14:57:00] 每3s一个tick
+    if ((tickTimeSpan_ > 9 * 3600 + 30 * 60 && tickTimeSpan_ < 11 * 3600 + 30 * 60) ||
+        (tickTimeSpan_ > 13 * 3600 && tickTimeSpan_ < 14 * 3600 + 57 * 60))
+    {
+        return tickTimeSpan_ + 3;
+    }
+
+    // （9:25:00) 才第一个tick
+    if (tickTimeSpan_ < 9 * 3600 + 25 * 60)
+    {
+        return 9 * 3600 + 25 * 60;
+    }
+    
+    if (nextTickSpanMap.find(tickTimeSpan_) != nextTickSpanMap.end())
+    {
+        return nextTickSpanMap[tickTimeSpan_];
+    }
+    
+    return INT_MAX;
 }

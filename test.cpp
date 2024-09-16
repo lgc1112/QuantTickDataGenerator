@@ -71,7 +71,7 @@ void ReadRawOrders(const std::string &filename, std::vector<Order> &orders)
         order.FromRawOrder(rawOrder);
         orders.push_back(order);
 
-        if (++count > 10)
+        if (++count > 1000)
             break;
         // LOG_DEBUG("Read raw order:%s", rawOrder.ToString().c_str());
         // LOG_DEBUG("Read order:%s", order.ToString().c_str());
@@ -85,11 +85,13 @@ void ReadRawTransactions(const std::string &filename, std::vector<Transaction> &
 {
     std::ifstream file(filename);
     std::string line;
-    if (!file.is_open())
+    if (!file)
     {
-        std::cerr << "Failed to open file: " << filename << std::endl;
+        std::error_code ec(errno, std::generic_category());
+        LOG_ERROR("Error opening file %s, err:%s'", filename.c_str(), ec.message().c_str());
         return;
     }
+    
     RawTransaction rawTransaction;
     Transaction transaction;
     std::string temps;
@@ -190,8 +192,8 @@ int LiveTradingDataSimulator::Init()
     ReadRawOrders("data/Orders.csv", std::ref(orders_));
     ReadRawTransactions("data/Trans.csv", std::ref(transactions_));
     int orderSize = orders_.size(), transactionSize = transactions_.size();
-    std::cout << "Order: " << orderSize << std::endl;
-    std::cout << "Transaction: " << transactionSize << std::endl;
+    LOG_INFO("Order: %d", orderSize);   
+    LOG_INFO("Transaction: %d", transactionSize);
 
     return 0;
 }
@@ -290,11 +292,13 @@ int main()
     int ret = liveTradingDataSimulator.Init();
     if (ret)
     {
-        printf("Init liveTradingDataSimulator error!\n");
+        LOG_ERROR1("Init liveTradingDataSimulator error!");
         return ret;
     }
 
     liveTradingDataSimulator.Run();
+
+    transMgr.DumpSnapshotToFile("data/GenTick.csv");
 
     std::time_t endTime = std::time(0);
     std::tm *endLocalTime = std::localtime(&endTime);

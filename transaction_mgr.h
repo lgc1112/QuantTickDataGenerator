@@ -13,49 +13,32 @@
 #include <unordered_map>
 #include <vector>
 
-// class OrderMgr
-// {
-// public:
-//     OrderMgr();
-//     ~OrderMgr();
-
-//     int Init(const std::string &path);
-//     Order *GetLatestOrder();
-//     void UpdateLatestOrder();
-//     void AddOrder(Order *order);
-//     std::vector<std::pair<double, int64_t>> GetMax5BuyOders();  // [{委托价格, 委托数量}]
-//     std::vector<std::pair<double, int64_t>> GetMin5SellOders(); // [{委托价格, 委托数量}]
-
-// private:
-//     std::ifstream file_;
-//     Order curOrder_;
-//     std::unordered_map<int64_t, Order> curOrders_;
-// };
-
-
+// 交易管理器
 class TransactionMgr
 {
 public:
     TransactionMgr()
     : snapShorts_(1){};
-    ~TransactionMgr() {};
+    ~TransactionMgr(){};
 
-    // int Init(const std::string &path);
-    void DumpSnapshotToFile(const std::string &path);
-    void SetTickTimeSpan(int tickTimeSpan) { tickTimeSpan_ = tickTimeSpan; }
+    // 将快照数据写入文件
+    void DumpSnapshotToFile(const std::string &path); 
+    // 获取快照数量
+    int GetSnapshotNum() { return snapShorts_.size(); }; 
 
-    void OnReceiveOrder(void *data);
-    void OnReceiveTransaction(void *data);
-    void OnTick(int tickTimeSpan);
+    // 接收order回调
+    void OnReceiveOrder(void *data); 
+    // 接收transaction回调
+    void OnReceiveTransaction(void *data); 
+    // tick回调
+    void OnTick(int tickTimeSpan); 
 
 private:
     int _GetNextTickTimeSpan();
+    
     Transaction curTransaction_;
-    // std::unordered_map<int64_t, Transaction> curTransactions_;
     std::unordered_map<int64_t, Order *> curOrders_;
-    std::unordered_map<int64_t, std::vector<Transaction *>> pendingCancelTransactions_;
+    std::unordered_map<int64_t, std::vector<Transaction *>> pendingTransactions_;
     std::vector<RawSnapShort> snapShorts_;
     int tickTimeSpan_ = 0;
-    
 };
-

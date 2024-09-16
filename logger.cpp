@@ -10,7 +10,7 @@
 #include "logger.h"
 
 // 当前日志级别
-LogLevel currentLogLevel = LOG_DEBUG; // 默认为最详细的级别
+LogLevel currentLogLevel = LOG_WARN; // 日志级别
 
 // 检查日志级别是否足够高以输出日志
 bool isLogLevelEnabled(LogLevel level) {

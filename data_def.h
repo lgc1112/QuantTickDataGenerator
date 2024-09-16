@@ -173,25 +173,25 @@ struct RawSnapShort
     char refUpdateTime[9]; // 本地接收到消息的时间（时分秒）
     int refUpdateMicrosec; // 本地接收到消息的时间（微秒字段）
 
-    double lastPrice;    // 最新成交价
-    int64_t volume;      // 开盘到本发布时间累计成交量
-    int64_t lastVolume;  // 上次发布时间到本发布时间累计成交量
-    double turnover;     //  开盘到本发布时间累计成交金额
-    double lastTurnover; // 上次发布时间到本发布时间累计成交金额
+    double lastPrice = 0;    // 最新成交价
+    int64_t volume = 0;      // 开盘到本发布时间累计成交量
+    int64_t lastVolume = 0;  // 上次发布时间到本发布时间累计成交量
+    double turnover = 0;     //  开盘到本发布时间累计成交金额
+    double lastTurnover = 0; // 上次发布时间到本发布时间累计成交金额
 
-    double askPrice5, askPrice4, askPrice3, askPrice2, askPrice1; // 卖5，卖4，卖3，卖2，卖1盘口价格
-    double bidPrice1, bidPrice2, bidPrice3, bidPrice4, bidPrice5; // 买1，买2，买3，买4，买5盘口价格
+    double askPrice5 = 0, askPrice4 = 0, askPrice3 = 0, askPrice2 = 0, askPrice1 = 0; // 卖5，卖4，卖3，卖2，卖1盘口价格
+    double bidPrice1 = 0, bidPrice2 = 0, bidPrice3 = 0, bidPrice4 = 0, bidPrice5 = 0; // 买1，买2，买3，买4，买5盘口价格
 
-    int64_t askVolume5, askVolume4, askVolume3, askVolume2, askVolume1; // 卖5，卖4，卖3，卖2，卖1盘口挂单量
-    int64_t bidVolume1, bidVolume2, bidVolume3, bidVolume4, bidVolume5; // 买1，买2，买3，买4，买5盘口挂单量
+    int64_t askVolume5 = 0, askVolume4 = 0, askVolume3 = 0, askVolume2 = 0, askVolume1 = 0; // 卖5，卖4，卖3，卖2，卖1盘口挂单量
+    int64_t bidVolume1 = 0, bidVolume2 = 0, bidVolume3 = 0, bidVolume4 = 0, bidVolume5 = 0; // 买1，买2，买3，买4，买5盘口挂单量
 
-    int64_t openInterest; // 忽略，不要管，无需关注
+    int64_t openInterest = 0; // 忽略，不要管，无需关注
 
-    double upperLimitPrice; // 涨停板价
-    double lowerLimitPrice; // 跌停板价
-    double highestPrice;    // 最高价
-    double lowestPrice;     // 最低价
-    double preClosePrice;   // 昨天收盘价
+    double upperLimitPrice = 0; // 涨停板价
+    double lowerLimitPrice = 0; // 跌停板价
+    double highestPrice = 0;    // 最高价
+    double lowestPrice = 0;     // 最低价
+    double preClosePrice = 0;   // 昨天收盘价
 
     std::string ToString() const
     {

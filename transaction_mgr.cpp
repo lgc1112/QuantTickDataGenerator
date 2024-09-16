@@ -43,7 +43,7 @@ void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
     // 遍历数组并写入每个快照
     for (const auto &snapshot : snapShorts_)
     {
-        auto openInterest_ = 168.998;
+        auto preClosePrice_ = 168.998;
         auto upperLimitPrice_ = 168.998 * 1.2;
         auto lowerLimitPrice_ = 168.998 * 0.8;
         file << "SZ127080"
@@ -59,8 +59,8 @@ void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
              << snapshot.askVolume5 << "," << snapshot.askVolume4 << "," << snapshot.askVolume3 << ","
              << snapshot.askVolume2 << "," << snapshot.askVolume1 << "," << snapshot.bidVolume1 << ","
              << snapshot.bidVolume2 << "," << snapshot.bidVolume3 << "," << snapshot.bidVolume4 << ","
-             << snapshot.bidVolume5 << "," << openInterest_ << "," << upperLimitPrice_ << "," << lowerLimitPrice_ << ","
-             << snapshot.highestPrice << "," << snapshot.lowestPrice << "," << snapshot.preClosePrice << "\n";
+             << snapshot.bidVolume5 << "," << 0 << "," << upperLimitPrice_ << "," << lowerLimitPrice_ << ","
+             << snapshot.highestPrice << "," << snapshot.lowestPrice << "," << preClosePrice_ << "\n";
     }
 
     file.close();
@@ -78,7 +78,6 @@ void TransactionMgr::OnReceiveOrder(void *data)
     }
 
     curOrders_.emplace(orderID, order);
-    // LOG_ERROR("err curOrders_ %lu", curOrders_.size());
 
     auto it = pendingTransactions_.find(orderID);
     if (it != pendingTransactions_.end())

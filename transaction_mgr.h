@@ -46,16 +46,16 @@ public:
 
     void OnReceiveOrder(void *data);
     void OnReceiveTransaction(void *data);
-    void OnTick();
+    void OnTick(int tickTimeSpan);
 
 private:
     int _GetNextTickTimeSpan();
     Transaction curTransaction_;
     // std::unordered_map<int64_t, Transaction> curTransactions_;
     std::unordered_map<int64_t, Order *> curOrders_;
-    std::unordered_map<int64_t, Transaction *> pendingCancelTransactions_;
+    std::unordered_map<int64_t, std::vector<Transaction *>> pendingCancelTransactions_;
     std::vector<RawSnapShort> snapShorts_;
-    int tickTimeSpan_ = 0; // 8:25:00 -- 15
+    int tickTimeSpan_ = 0;
     
 };
 

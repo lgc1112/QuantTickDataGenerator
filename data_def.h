@@ -105,9 +105,9 @@ struct RawTransaction
                ", refUpdateTime:" + refUpdateTime + ", refUpdateMicrosec:" + std::to_string(refUpdateMicrosec) +
                ", tradeId:" + std::to_string(tradeId) + ", tradePrice:" + std::to_string(tradePrice) +
                ", tradeVolume:" + std::to_string(tradeVolume) + ", turnover:" + std::to_string(turnover) +
-               ", direction:" + direction + ", orderKind:" + orderKind +
-               ", functionCode:" + functionCode + ", askOrderID:" + std::to_string(askOrderID) +
-               ", bidOrderID:" + std::to_string(bidOrderID) + ", channelId:" + std::to_string(channelId);
+               ", direction:" + direction + ", orderKind:" + orderKind + ", functionCode:" + functionCode +
+               ", askOrderID:" + std::to_string(askOrderID) + ", bidOrderID:" + std::to_string(bidOrderID) +
+               ", channelId:" + std::to_string(channelId);
 
         // return std::string("instrumentId:") + instrumentId + ", tradingDay:" + tradingDay +
         //        ", updateTime:" + updateTime + ", updateMillisec:" + std::to_string(updateMillisec) +
@@ -128,7 +128,8 @@ struct Transaction
     double orderPrice = 0;         // 委托价格
     int64_t orderVolume = 0;       // 委托数量
     bool isBuy = false;            // 买卖方向（1=买，2=卖）
-    uint64_t orderID = 0;          // 买方或卖方报单号
+    uint64_t askOrderID = 0;       // 卖方报单号
+    uint64_t bidOrderID = 0;       // 买方报单号
     bool isCancel = false;         // 是否为撤单
 
     void FromRawTransaction(const RawTransaction &rawTransaction);
@@ -156,7 +157,8 @@ struct Transaction
                ", refUpdateTimeSpan:" + std::to_string(refUpdateTimeSpan) + "(" + refUpdateTime + " " +
                std::to_string(refUpdateTimeMicrosec) + ")" + ", orderPrice:" + std::to_string(orderPrice) +
                ", orderVolume:" + std::to_string(orderVolume) + ", isBuy:" + std::to_string(isBuy) +
-               ", orderID:" + std::to_string(orderID) + ", isCancel:" + std::to_string(isCancel);
+               ", askOrderID:" + std::to_string(askOrderID) + ", bidOrderID:" + std::to_string(bidOrderID) +
+               ", isCancel:" + std::to_string(isCancel);
     }
 };
 
@@ -165,8 +167,8 @@ struct RawSnapShort
     char instrumentId[32]; // 合约代码
     char tradingDay[9];    // 成交日期
 
-    char updateTime[9];        // 交易所发布时间（时分秒）
-    int updateMillisec = 0;    // 交易所发布时间（毫秒字段）
+    char updateTime[9];     // 交易所发布时间（时分秒）
+    int updateMillisec = 0; // 交易所发布时间（毫秒字段）
 
     char refUpdateTime[9]; // 本地接收到消息的时间（时分秒）
     int refUpdateMicrosec; // 本地接收到消息的时间（微秒字段）
@@ -255,7 +257,7 @@ inline void Order::FromRawOrder(const RawOrder &rawOrder)
     isBuy = rawOrder.direction == '1';
 }
 
-inline void Transaction::FromRawTransaction(const RawTransaction &rawTransaction) 
+inline void Transaction::FromRawTransaction(const RawTransaction &rawTransaction)
 {
     memcpy(instrumentId, rawTransaction.instrumentId, sizeof(instrumentId));
 
@@ -276,7 +278,8 @@ inline void Transaction::FromRawTransaction(const RawTransaction &rawTransaction
     orderPrice = rawTransaction.tradePrice;
     orderVolume = rawTransaction.tradeVolume;
     isBuy = rawTransaction.direction == '1';
-    orderID = isBuy ? rawTransaction.bidOrderID : rawTransaction.askOrderID;
+    bidOrderID = rawTransaction.bidOrderID;
+    askOrderID = rawTransaction.askOrderID;
     isCancel = rawTransaction.functionCode == 'C';
 }
 

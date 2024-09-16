@@ -71,8 +71,8 @@ void ReadRawOrders(const std::string &filename, std::vector<Order> &orders)
         order.FromRawOrder(rawOrder);
         orders.push_back(order);
 
-        if (++count > 1000)
-            break;
+        // if (++count == 10000)
+        //     break;
         // LOG_DEBUG("Read raw order:%s", rawOrder.ToString().c_str());
         // LOG_DEBUG("Read order:%s", order.ToString().c_str());
     }
@@ -135,7 +135,7 @@ void ReadRawTransactions(const std::string &filename, std::vector<Transaction> &
         transaction.FromRawTransaction(rawTransaction);
         transactions.push_back(transaction);
 
-        if (++count > 10)
+        if (++count == 10000)
             break;
 
         // LOG_DEBUG("Read raw transaction:%s", rawTransaction.ToString().c_str());
@@ -212,8 +212,8 @@ inline void LiveTradingDataSimulator::Run()
 
         if (curOrderIdx < orderSize && curTransactionIdx < transactionSize)
         {
-            auto latestOrder = orders_[curOrderIdx];
-            auto latestTransaction = transactions_[curTransactionIdx];
+            auto &latestOrder = orders_[curOrderIdx];
+            auto &latestTransaction = transactions_[curTransactionIdx];
             // 收到一条新的order
             if (latestOrder.refUpdateTimeSpan < latestTransaction.refUpdateTimeSpan)
             {
@@ -239,7 +239,7 @@ inline void LiveTradingDataSimulator::Run()
         // 收到一条新的order
         if (curOrderIdx < orderSize)
         {
-            auto latestOrder = orders_[curOrderIdx++];
+            auto &latestOrder = orders_[curOrderIdx++];
             // std::cout << "Recv Order: " << latestOrder.ToString() << std::endl;
             // LOG_INFO( "Recv Order: %s", latestOrder.ToString().c_str());
             for (auto &handler : eventHandlers_[DataEventType::RECV_ORDER])
@@ -251,7 +251,7 @@ inline void LiveTradingDataSimulator::Run()
         // 收到一条新的transaction
         if (curTransactionIdx < transactionSize)
         {
-            auto latestTransaction = transactions_[curTransactionIdx++];
+            auto &latestTransaction = transactions_[curTransactionIdx++];
             // std::cout << "Recv Transaction: " << latestTransaction.ToString() << std::endl;
             // LOG_INFO( "Recv Transaction: %s", latestTransaction.ToString().c_str());
             for (auto &handler : eventHandlers_[DataEventType::RECV_TRANSACTION])

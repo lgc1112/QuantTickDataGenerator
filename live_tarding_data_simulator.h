@@ -34,9 +34,13 @@ public:
     // 注册事件处理器
     void RegisterEventHandler(DataEventType event, std::function<void(void *)> handler);
 
+    // 检查Tick存在百分比
+    double CheckTickDataExistPercent(const std::string &filename);
+
 private:
     void _ReadRawOrders(const std::string &filename, std::vector<Order> &orders);
     void _ReadRawTransactions(const std::string &filename, std::vector<Transaction> &transactions);
+    void _ReadRawSnapshots(const std::string &filename, std::vector<RawSnapshot> &snapshots);
     // 事件处理器列表
     std::array<std::vector<std::function<void(void *)>>, DataEventType::END> eventHandlers_;
 

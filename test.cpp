@@ -33,6 +33,7 @@ int main()
     // 初始化交易管理器并注册事件处理函数
     LiveTradingDataSimulator liveTradingDataSimulator;
     TransactionMgr transMgr;
+    transMgr.SetPreClosePrice(168.998);
     liveTradingDataSimulator.RegisterEventHandler(
         DataEventType::RECV_ORDER,
         std::function<void(void *)>([&transMgr](void *data) { transMgr.OnReceiveOrder(data); }));
@@ -54,7 +55,6 @@ int main()
     // 生成tick数据
     std::cout << "GenTickNum: " << transMgr.GetSnapshotNum() << std::endl; 
     transMgr.DumpSnapshotToFile("data/GenTick.csv");
-
     // 获取当前时间
     std::time_t endTime = std::time(0);
     std::tm *endLocalTime = std::localtime(&endTime);

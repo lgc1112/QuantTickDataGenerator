@@ -13,6 +13,7 @@
 #include <system_error>
 #include <unordered_map>
 #include <climits>
+#include <cmath>
 
 #include "logger.h"
 #include "transaction_mgr.h"
@@ -28,6 +29,7 @@ void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
         return;
     }
 
+    OnTick(99 * 3600 + 59 * 60 + 59);
     LOG_INFO("DumpSnapshotToFile:%s", filename.c_str());
     LOG_INFO("pendingTransactions_:%lu", pendingTransactions_.size());
     LOG_INFO("curOrders_:%lu", curOrders_.size());
@@ -43,24 +45,25 @@ void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
     // 遍历数组并写入每个快照
     for (const auto &snapshot : snapShorts_)
     {
-        auto preClosePrice_ = 168.998;
-        auto upperLimitPrice_ = 168.998 * 1.2;
-        auto lowerLimitPrice_ = 168.998 * 0.8;
+        auto upperLimitPrice_ = std::round(preClosePrice_ * 1.2 * 1000) / 1000.0;
+        auto lowerLimitPrice_ = std::round(preClosePrice_ * 0.8 * 1000) / 1000.0;
+        
         file << "SZ127080"
              << "," << 20230619 << "," << snapshot.updateTime << "," << std::setw(3) << std::setfill('0')
              << snapshot.updateMillisec << ","
              << "0"
              << "," << std::setw(3) << std::setfill('0') << snapshot.refUpdateMicrosec << "," << std::fixed
              << std::setprecision(8) << snapshot.lastPrice << "," << snapshot.volume << "," << snapshot.lastVolume
-             << "," << snapshot.turnover << "," << snapshot.lastTurnover << "," << snapshot.askPrice5 << ","
-             << snapshot.askPrice4 << "," << snapshot.askPrice3 << "," << snapshot.askPrice2 << ","
-             << snapshot.askPrice1 << "," << snapshot.bidPrice1 << "," << snapshot.bidPrice2 << ","
-             << snapshot.bidPrice3 << "," << snapshot.bidPrice4 << "," << snapshot.bidPrice5 << ","
-             << snapshot.askVolume5 << "," << snapshot.askVolume4 << "," << snapshot.askVolume3 << ","
-             << snapshot.askVolume2 << "," << snapshot.askVolume1 << "," << snapshot.bidVolume1 << ","
-             << snapshot.bidVolume2 << "," << snapshot.bidVolume3 << "," << snapshot.bidVolume4 << ","
-             << snapshot.bidVolume5 << "," << 0 << "," << upperLimitPrice_ << "," << lowerLimitPrice_ << ","
-             << snapshot.highestPrice << "," << snapshot.lowestPrice << "," << preClosePrice_ << "\n";
+             << "," << (double)(int)snapshot.turnover << "," << (double)(int)snapshot.lastTurnover << ","
+             << snapshot.askPrice5 << "," << snapshot.askPrice4 << "," << snapshot.askPrice3 << ","
+             << snapshot.askPrice2 << "," << snapshot.askPrice1 << "," << snapshot.bidPrice1 << ","
+             << snapshot.bidPrice2 << "," << snapshot.bidPrice3 << "," << snapshot.bidPrice4 << ","
+             << snapshot.bidPrice5 << "," << snapshot.askVolume5 << "," << snapshot.askVolume4 << ","
+             << snapshot.askVolume3 << "," << snapshot.askVolume2 << "," << snapshot.askVolume1 << ","
+             << snapshot.bidVolume1 << "," << snapshot.bidVolume2 << "," << snapshot.bidVolume3 << ","
+             << snapshot.bidVolume4 << "," << snapshot.bidVolume5 << "," << 0 << "," << upperLimitPrice_ << ","
+             << lowerLimitPrice_ << "," << snapshot.highestPrice << "," << snapshot.lowestPrice << "," << preClosePrice_
+             << "\n";
     }
 
     file.close();
@@ -70,6 +73,31 @@ int count = 0;
 void TransactionMgr::OnReceiveOrder(void *data)
 {
     auto order = static_cast<Order *>(data);
+
+    int secondsInDay = (order->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
+    OnTick(secondsInDay);
+    // // 超时，需要tick
+    // int secondsInDay = (order->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
+    // // secondsInDay = 14 * 3600 + 57 * 60;
+    // int nextTick = _GetNextTickTimeSpan();
+    // while (secondsInDay >= nextTick)
+    // {
+    //     static int count = 0;
+    //     if (++count >= 10)
+    //         return;
+
+    //     LOG_INFO("tickTimeSpan_: %d(%02d:%02d:%02d), transaction:[%s], pendingTransactions: %lu",
+    //              tickTimeSpan_,
+    //              tickTimeSpan_ / 3600,
+    //              tickTimeSpan_ / 60 % 60,
+    //              tickTimeSpan_ % 60,
+    //              order->ToString().c_str(),
+    //              pendingTransactions_.size());
+    //     tickTimeSpan_ = nextTick;
+    //     OnTick(tickTimeSpan_);
+    //     nextTick = _GetNextTickTimeSpan();
+    // }
+
     auto orderID = order->orderID;
     if (curOrders_.find(orderID) != curOrders_.end())
     {
@@ -83,7 +111,6 @@ void TransactionMgr::OnReceiveOrder(void *data)
         order->sellOrdersIter = sellOrders_.emplace(order);
 
     curOrders_.emplace(orderID, order);
-    // LOG_DEBUG("Add order: %lld, refUpdateTimeSpan:%lld", order->orderID, order->refUpdateTimeSpan);
 
     // 处理正在等待order的transaction
     auto it = pendingTransactions_.find(orderID);
@@ -114,18 +141,29 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     int secondsInDay = (transaction->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
     // secondsInDay = 14 * 3600 + 57 * 60;
     int nextTick = _GetNextTickTimeSpan();
-    while (secondsInDay >= nextTick)
+    if (secondsInDay >= nextTick)
     {
-        LOG_INFO("tickTimeSpan_: %d(%02d:%02d:%02d), transaction:[%s], pendingTransactions: %lu",
-                 tickTimeSpan_,
-                 tickTimeSpan_ / 3600,
-                 tickTimeSpan_ / 60 % 60,
-                 tickTimeSpan_ % 60,
-                 transaction->ToString().c_str(),
-                 pendingTransactions_.size());
-        tickTimeSpan_ = nextTick;
-        OnTick(tickTimeSpan_);
-        nextTick = _GetNextTickTimeSpan();
+        while (secondsInDay >= nextTick)
+        {
+            // static int count = 0;
+            // if (++count >= 10)
+            //     return;
+
+            LOG_INFO("tickTimeSpan_: %d(%02d:%02d:%02d), transaction:[%s], pendingTransactions: %lu",
+                     tickTimeSpan_,
+                     tickTimeSpan_ / 3600,
+                     tickTimeSpan_ / 60 % 60,
+                     tickTimeSpan_ % 60,
+                     transaction->ToString().c_str(),
+                     pendingTransactions_.size());
+            tickTimeSpan_ = nextTick;
+            OnTick(tickTimeSpan_);
+            nextTick = _GetNextTickTimeSpan();
+        }
+    }
+    else
+    {
+        OnTick(secondsInDay);
     }
     // LOG_INFO("tickTimeSpan_: %d, nextTick: %d", secondsInDay, nextTick);
     // exit(0);
@@ -133,30 +171,30 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     auto askOrderID = transaction->askOrderID;
     auto bidOrderID = transaction->bidOrderID;
 
-    // 校验数据是否有问题
-    if (askOrderID == 0 && bidOrderID == 0)
-    {
-        LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
-        return;
-    }
+    // // 校验数据是否有问题
+    // if (askOrderID == 0 && bidOrderID == 0)
+    // {
+    //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
+    //     return;
+    // }
 
-    if (askOrderID == bidOrderID)
-    {
-        LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
-        return;
-    }
+    // if (askOrderID == bidOrderID)
+    // {
+    //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
+    //     return;
+    // }
 
-    if (transaction->isCancel && askOrderID != 0 && bidOrderID != 0)
-    {
-        LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
-        return;
-    }
+    // if (transaction->isCancel && askOrderID != 0 && bidOrderID != 0)
+    // {
+    //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
+    //     return;
+    // }
 
-    if (!transaction->isCancel && (askOrderID == 0 || bidOrderID == 0))
-    {
-        LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
-        return;
-    }
+    // if (!transaction->isCancel && (askOrderID == 0 || bidOrderID == 0))
+    // {
+    //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
+    //     return;
+    // }
 
     auto askIt = askOrderID == 0 ? curOrders_.end() : curOrders_.find(askOrderID);
     auto bidIt = bidOrderID == 0 ? curOrders_.end() : curOrders_.find(bidOrderID);
@@ -287,109 +325,66 @@ void TransactionMgr::OnReceiveTransaction(void *data)
 
 void TransactionMgr::OnTick(int tickTimeSpan)
 {
+    static int count = 0;
+    if (++count >= 50000)
+        return;
+
     // 更新快照
     auto &snapShort = snapShorts_.back();
-    sprintf(snapShort.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan_ % 60);
-    if (curOrders_.size() != buyOrders_.size() + sellOrders_.size())
-        LOG_ERROR("curOrders_ size: %lu, buyOrders_ size + sellOrders_ size: %lu",
-                  curOrders_.size(),
-                  buyOrders_.size() + sellOrders_.size());
-    
-    // // LOG_DEBUG("max buyOrders_: %.3f, min sellOrders_: %.3f", (*buyOrders_.rbegin())->orderPrice, (*sellOrders_.begin())->orderPrice);
-    // std::array<std::pair<double, int64_t>, 5> max5BuyPrices_;  // {prices : volume}
-    // std::array<std::pair<double, int64_t>, 5> min5SellPrices_; // {prices : volume}
-    // int idx = 0;
-    // for (auto it = buyOrders_.rbegin(); it != buyOrders_.rend(); it++)
-    // {
-    //     auto prices = (*it)->orderPrice;
-    //     auto maxPrice = max5BuyPrices_[idx].first;
-    //     if (prices == maxPrice)
-    //     {
-    //         max5BuyPrices_[idx].second += (*it)->orderVolume;
-    //     }
-    //     else
-    //     {
-    //         if (idx == 4 && maxPrice != 0)
-    //             break;
+    sprintf(snapShort.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan % 60);
+    // LOG_INFO("tickTimeSpan: %d, %d, %s", tickTimeSpan, tickTimeSpan % 60, snapShort.updateTime);
 
-    //         max5BuyPrices_[maxPrice == 0 ? idx : ++idx] = {prices, (*it)->orderVolume};
-    //     }
-    // }
+    // if (curOrders_.size() != buyOrders_.size() + sellOrders_.size())
+    //     LOG_ERROR("curOrders_ size: %lu, buyOrders_ size + sellOrders_ size: %lu",
+    //               curOrders_.size(),
+    //               buyOrders_.size() + sellOrders_.size());
 
-    // idx = 0;
-    // for (auto it = sellOrders_.begin(); it != sellOrders_.end(); it++)
-    // {
-    //     auto prices = (*it)->orderPrice;
-    //     auto minPrice = min5SellPrices_[idx].first;
-    //     if (prices == minPrice)
-    //     {
-    //         min5SellPrices_[idx].second += (*it)->orderVolume;
-    //     }
-    //     else
-    //     {
-    //         if (idx == 4 && minPrice != 0)
-    //             break;
-
-    //         min5SellPrices_[minPrice == 0 ? idx : ++idx] = {prices, (*it)->orderVolume};
-    //     }
-    // }
-
-    std::vector<std::pair<double, int64_t>> max5BuyPrices_(5);  // {prices : volume}
-    std::vector<std::pair<double, int64_t>> min5SellPrices_(5); // {prices : volume}
-    // 遍历orders
-    for (const auto &pair : curOrders_)
+    // LOG_DEBUG("max buyOrders_: %.3f, min sellOrders_: %.3f", (*buyOrders_.rbegin())->orderPrice, (*sellOrders_.begin())->orderPrice);
+    std::array<std::pair<double, int64_t>, 5> max5BuyPrices_;  // {prices : volume}
+    std::array<std::pair<double, int64_t>, 5> min5SellPrices_; // {prices : volume}
+    int idx = 0;
+    for (auto it = buyOrders_.rbegin(); it != buyOrders_.rend(); it++)
     {
-        auto prices = pair.second->orderPrice;
-        bool isBuy = pair.second->isBuy;
-        // 生成max5BuyPrices_集合
-        if (isBuy && max5BuyPrices_.back().first <= prices)
+        // 排除超前订单
+        int secondsInDay = ((*it)->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
+        if (secondsInDay > tickTimeSpan)
+            continue;
+
+        auto prices = (*it)->orderPrice;
+        auto maxPrice = max5BuyPrices_[idx].first;
+        if (prices == maxPrice)
         {
-            // 插入排序
-            for (int i = 4; i >= 0; i--)
-            {
-                // 存在相等的价格, 更新交易量即可
-                if (max5BuyPrices_[i].first == prices)
-                {
-                    max5BuyPrices_[i].second += pair.second->orderVolume;
-                    break;
-                }
-
-                // 如果找到了队头或找到了前一个元素比当前价格更大，说明此处是插入位置
-                if (i == 0 || max5BuyPrices_[i - 1].first > prices)
-                {
-                    max5BuyPrices_.pop_back();
-                    max5BuyPrices_.insert(max5BuyPrices_.begin() + i, {prices, pair.second->orderVolume});
-                    break;
-                }
-
-                // 否则继续往前找
-            }
+            max5BuyPrices_[idx].second += (*it)->orderVolume;
         }
-
-        // 生成min5SellPrices_集合
-        auto backPrices = min5SellPrices_.back().first;
-        if (!isBuy && (backPrices >= prices || backPrices == 0))
+        else
         {
-            // 插入排序
-            for (int i = 4; i >= 0; i--)
-            {
-                // 存在相等的价格, 更新交易量即可
-                if (min5SellPrices_[i].first == prices)
-                {
-                    min5SellPrices_[i].second += pair.second->orderVolume;
-                    break;
-                }
+            if (idx == 4 && maxPrice != 0)
+                break;
 
-                // 如果找到了队头或找到了前一个元素比当前价格更小，说明此处是插入位置
-                if (i == 0 || (min5SellPrices_[i - 1].first < prices && min5SellPrices_[i - 1].first != 0))
-                {
-                    min5SellPrices_.pop_back();
-                    min5SellPrices_.insert(min5SellPrices_.begin() + i, {prices, pair.second->orderVolume});
-                    break;
-                }
+            max5BuyPrices_[maxPrice == 0 ? idx : ++idx] = {prices, (*it)->orderVolume};
+        }
+    }
 
-                // 否则继续往前找
-            }
+    idx = 0;
+    for (auto it = sellOrders_.begin(); it != sellOrders_.end(); it++)
+    {
+        // 排除超前订单
+        int secondsInDay = ((*it)->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
+        if (secondsInDay > tickTimeSpan)
+            continue;
+
+        auto prices = (*it)->orderPrice;
+        auto minPrice = min5SellPrices_[idx].first;
+        if (prices == minPrice)
+        {
+            min5SellPrices_[idx].second += (*it)->orderVolume;
+        }
+        else
+        {
+            if (idx == 4 && minPrice != 0)
+                break;
+
+            min5SellPrices_[minPrice == 0 ? idx : ++idx] = {prices, (*it)->orderVolume};
         }
     }
 
@@ -416,18 +411,30 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     snapShort.bidPrice5 = max5BuyPrices_[4].first;
     snapShort.bidVolume5 = max5BuyPrices_[4].second;
 
-    // 切换到下一个快照
-    snapShorts_.push_back(RawSnapShort());
+    int size = snapShorts_.size();
+    if (snapShorts_[size - 2].Compare(snapShort))
+    {
+        LOG_INFO("snapShorts_[size - 2] == snapShorts_[size - 1], size: %lu", size);
+        return;
+    }
 
-    // 清理快照信息
+    // 保存快照信息
+    auto highestPrice = snapShort.highestPrice;
+    auto lowestPrice = snapShort.lowestPrice;
+    auto lastPrice = snapShort.lastPrice;
+    auto volume = snapShort.volume;
+    auto turnover = snapShort.turnover;
+
+    // 切换到下一个快照
+    snapShorts_.emplace_back();
     auto &lastSnapShort = snapShorts_.back();
-    lastSnapShort.lowerLimitPrice = snapShort.lowerLimitPrice;
-    lastSnapShort.highestPrice = snapShort.highestPrice;
-    lastSnapShort.lastPrice = snapShort.lastPrice;
-    lastSnapShort.volume = snapShort.volume;
-    lastSnapShort.lastVolume = 0;
-    lastSnapShort.turnover = snapShort.turnover;
-    lastSnapShort.lastTurnover = 0;
+    lastSnapShort.highestPrice = highestPrice;
+    lastSnapShort.lowestPrice = lowestPrice;
+    lastSnapShort.lastPrice = lastPrice;
+    lastSnapShort.volume = volume;
+    // lastSnapShort.lastVolume = 0;
+    lastSnapShort.turnover = turnover;
+    // lastSnapShort.lastTurnover = 0;
 }
 
 // 打点时间

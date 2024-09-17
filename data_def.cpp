@@ -6,7 +6,11 @@
  * @edit: regangcli
  * @brief: 
  */
+#include <cmath>
+
 #include "data_def.h"
+#include "logger.h"
+
 
 bool OrderCompare::operator()(const Order *a, const Order *b) const
 {
@@ -141,6 +145,79 @@ std::string RawSnapShort::ToString() const
            ", lowerLimitPrice:" + std::to_string(lowerLimitPrice) + ", highestPrice:" + std::to_string(highestPrice) +
            ", lowestPrice:" + std::to_string(lowestPrice) + ", preClosePrice:" + std::to_string(preClosePrice);
 };
+
+bool CompareDouble(double a, double b, double epsilon = 1e-6) {
+    return std::abs(a - b) < epsilon;
+}
+
+bool RawSnapShort::Compare(const RawSnapShort &other) const {
+    if (volume != other.volume || lastPrice != other.lastPrice || !CompareDouble(turnover, other.turnover) )
+        return false;
+
+    // if (askPrice1 != other.askPrice1 || askPrice2 != other.askPrice2 || askPrice3 != other.askPrice3 ||
+    //     askPrice4 != other.askPrice4 || askPrice5 != other.askPrice5)
+    // {
+    //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+    //     return false;
+    // }
+
+    if (!CompareDouble(askPrice1, other.askPrice1) || !CompareDouble(askPrice2, other.askPrice2) ||
+        !CompareDouble(askPrice3, other.askPrice3) || !CompareDouble(askPrice4, other.askPrice4) ||
+        !CompareDouble(askPrice5, other.askPrice5))
+    {
+        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+        return false;
+    }
+
+    // if (bidPrice1 != other.bidPrice1 || bidPrice2 != other.bidPrice2 || bidPrice3 != other.bidPrice3 ||
+    //     bidPrice4 != other.bidPrice4 || bidPrice5 != other.bidPrice5)
+    // {
+    //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+    //     return false;
+    // }
+
+    if (!CompareDouble(bidPrice1, other.bidPrice1) || !CompareDouble(bidPrice2, other.bidPrice2) ||
+        !CompareDouble(bidPrice3, other.bidPrice3) || !CompareDouble(bidPrice4, other.bidPrice4) ||
+        !CompareDouble(bidPrice5, other.bidPrice5))
+    {
+        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+        return false;
+    }
+
+    if (askVolume1 != other.askVolume1 || askVolume2 != other.askVolume2 || askVolume3 != other.askVolume3 ||
+        askVolume4 != other.askVolume4 || askVolume5 != other.askVolume5)
+    {
+        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+        return false;
+    }
+
+    if (bidVolume1 != other.bidVolume1 || bidVolume2 != other.bidVolume2 || bidVolume3 != other.bidVolume3 ||
+        bidVolume4 != other.bidVolume4 || bidVolume5 != other.bidVolume5)
+    {
+        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+        return false;
+    }
+
+    // if (highestPrice != other.highestPrice || lowestPrice != other.lowestPrice)
+    // {
+    //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+    //     return false;
+    // }
+
+    if (!CompareDouble(upperLimitPrice, other.upperLimitPrice) || !CompareDouble(lowerLimitPrice, other.lowerLimitPrice))
+    {
+        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+        return false;
+    }
+
+    // if (!CompareDouble(highestPrice, other.highestPrice) || !CompareDouble(lowestPrice, other.lowestPrice || !CompareDouble(preClosePrice, other.preClosePrice)))
+    // {
+    //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+    //     return false;
+    // }
+
+    return true;
+}
 
 std::string RawTransaction::ToString() const
 {

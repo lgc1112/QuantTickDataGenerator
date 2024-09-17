@@ -237,6 +237,11 @@ void LiveTradingDataSimulator::Run()
     }
 }
 
+double LiveTradingDataSimulator::CheckTickDataExistPercent(const std::string &filename) {
+    
+    return 0;
+}
+
 void LiveTradingDataSimulator::RegisterEventHandler(DataEventType event, std::function<void(void *)> handler)
 {
     eventHandlers_[event].push_back(handler);

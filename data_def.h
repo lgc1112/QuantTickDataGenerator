@@ -15,6 +15,7 @@
 #include <cstring> // 包含对 memcpy 的声明
 #include <string>
 #include <set>
+#include <climits>
 
 struct RawOrder
 {
@@ -86,10 +87,11 @@ struct RawSnapShort
     double upperLimitPrice = 0; // 涨停板价
     double lowerLimitPrice = 0; // 跌停板价
     double highestPrice = 0;    // 最高价
-    double lowestPrice = 0;     // 最低价
+    double lowestPrice = INT_MAX;     // 最低价
     double preClosePrice = 0;   // 昨天收盘价
 
     std::string ToString() const;
+    bool Compare(const RawSnapShort &other) const;
 };
 
 struct Order;

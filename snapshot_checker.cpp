@@ -43,7 +43,7 @@ double TickDataChecker::CheckTickDataExistPercent(const std::string &filename,
         ;
 
     // 读取到4799行
-    while (std::getline(file, line) && currentLine++ <= 4799)
+    while (std::getline(file, line) && currentLine++ <= 4800)
     {
         totalCount++;
 
@@ -120,8 +120,6 @@ double TickDataChecker::CheckTickDataExistPercent(const std::string &filename,
         if (!success)
             LOG_WARN("snapshot not found, volume: %lld, %s", rawSnapshot.volume, rawSnapshot.ToString().c_str());
 
-        // if (totalCount == 1000)
-        //     break;
     }
 
     // 打印匹配情况

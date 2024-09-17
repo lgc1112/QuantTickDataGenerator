@@ -84,27 +84,6 @@ void TransactionMgr::OnReceiveOrder(void *data)
 
     int secondsInDay = (order->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
     OnTick(secondsInDay);
-    // // 超时，需要tick
-    // int secondsInDay = (order->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
-    // // secondsInDay = 14 * 3600 + 57 * 60;
-    // int nextTick = _GetNextTickTimeSpan();
-    // while (secondsInDay >= nextTick)
-    // {
-    //     static int count = 0;
-    //     if (++count >= 10)
-    //         return;
-
-    //     LOG_INFO("tickTimeSpan_: %d(%02d:%02d:%02d), transaction:[%s], pendingTransactions: %lu",
-    //              tickTimeSpan_,
-    //              tickTimeSpan_ / 3600,
-    //              tickTimeSpan_ / 60 % 60,
-    //              tickTimeSpan_ % 60,
-    //              order->ToString().c_str(),
-    //              pendingTransactions_.size());
-    //     tickTimeSpan_ = nextTick;
-    //     OnTick(tickTimeSpan_);
-    //     nextTick = _GetNextTickTimeSpan();
-    // }
 
     auto orderID = order->orderID;
     if (curOrders_.find(orderID) != curOrders_.end())
@@ -125,7 +104,7 @@ void TransactionMgr::OnReceiveOrder(void *data)
     if (it != pendingTransactions_.end())
     {
         auto &transactions = it->second;
-        // LOG_DEBUG("erase pendding orderId:%lld, transactions:%lu", orderID, transactions.size());
+        
         // 遍历处理所有等待的transaction
         for (auto transaction : transactions)
         {
@@ -135,35 +114,19 @@ void TransactionMgr::OnReceiveOrder(void *data)
 
         pendingTransactions_.erase(it);
     }
-
-    // std::cout << count << ": " << order->ToString() << std::endl;
-    // if (++count == 10)
-    //     exit(0);
 }
 
 void TransactionMgr::OnReceiveTransaction(void *data)
 {
     auto transaction = static_cast<Transaction *>(data);
 
-    // 超时，需要tick
     int secondsInDay = (transaction->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
-    // secondsInDay = 14 * 3600 + 57 * 60;
     int nextTick = _GetNextTickTimeSpan();
+    // tick跨帧时，需要通过_GetNextTickTimeSpan进行追帧
     if (secondsInDay >= nextTick)
     {
         while (secondsInDay >= nextTick)
         {
-            // static int count = 0;
-            // if (++count >= 10)
-            //     return;
-
-            // LOG_INFO("tickTimeSpan_: %d(%02d:%02d:%02d), transaction:[%s], pendingTransactions: %lu",
-            //          tickTimeSpan_,
-            //          tickTimeSpan_ / 3600,
-            //          tickTimeSpan_ / 60 % 60,
-            //          tickTimeSpan_ % 60,
-            //          transaction->ToString().c_str(),
-            //          pendingTransactions_.size());
             tickTimeSpan_ = nextTick;
             OnTick(tickTimeSpan_);
             nextTick = _GetNextTickTimeSpan();
@@ -173,8 +136,6 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     {
         OnTick(secondsInDay);
     }
-    // LOG_INFO("tickTimeSpan_: %d, nextTick: %d", secondsInDay, nextTick);
-    // exit(0);
 
     auto askOrderID = transaction->askOrderID;
     auto bidOrderID = transaction->bidOrderID;
@@ -185,19 +146,16 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
     //     return;
     // }
-
     // if (askOrderID == bidOrderID)
     // {
     //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
     //     return;
     // }
-
     // if (transaction->isCancel && askOrderID != 0 && bidOrderID != 0)
     // {
     //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
     //     return;
     // }
-
     // if (!transaction->isCancel && (askOrderID == 0 || bidOrderID == 0))
     // {
     //     LOG_ERROR("invalid order, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
@@ -325,10 +283,6 @@ void TransactionMgr::OnReceiveTransaction(void *data)
         snapshot.highestPrice = std::max(snapshot.highestPrice, lastPrice);
         snapshot.lowestPrice = std::min(snapshot.lowestPrice, lastPrice);
     }
-
-    // std::cout << count << "Recv Transaction : " << transaction->ToString() << std::endl;
-    // if (++count == 1000)
-    //     exit(0);
 }
 
 void TransactionMgr::OnTick(int tickTimeSpan)
@@ -337,23 +291,12 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     auto &snapshot = snapshots_.back();
     sprintf(snapshot.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan % 60);
     // LOG_INFO("tickTimeSpan: %d, %d, %s", tickTimeSpan, tickTimeSpan % 60, snapshot.updateTime);
-
-    // if (curOrders_.size() != buyOrders_.size() + sellOrders_.size())
-    //     LOG_ERROR("curOrders_ size: %lu, buyOrders_ size + sellOrders_ size: %lu",
-    //               curOrders_.size(),
-    //               buyOrders_.size() + sellOrders_.size());
-
-    // LOG_DEBUG("max buyOrders_: %.3f, min sellOrders_: %.3f", (*buyOrders_.rbegin())->orderPrice, (*sellOrders_.begin())->orderPrice);
+    
     std::array<std::pair<double, int64_t>, 5> max5BuyPrices_;  // {prices : volume}
     std::array<std::pair<double, int64_t>, 5> min5SellPrices_; // {prices : volume}
     int idx = 0;
     for (auto it = buyOrders_.rbegin(); it != buyOrders_.rend(); it++)
     {
-        // 排除超前订单
-        int secondsInDay = ((*it)->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
-        if (secondsInDay > tickTimeSpan)
-            continue;
-
         auto prices = (*it)->orderPrice;
         auto maxPrice = max5BuyPrices_[idx].first;
         if (prices == maxPrice)
@@ -372,11 +315,6 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     idx = 0;
     for (auto it = sellOrders_.begin(); it != sellOrders_.end(); it++)
     {
-        // 排除超前订单
-        int secondsInDay = ((*it)->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
-        if (secondsInDay > tickTimeSpan)
-            continue;
-
         auto prices = (*it)->orderPrice;
         auto minPrice = min5SellPrices_[idx].first;
         if (prices == minPrice)
@@ -440,9 +378,7 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     lastSnapShort.lowestPrice = lowestPrice;
     lastSnapShort.lastPrice = lastPrice;
     lastSnapShort.volume = volume;
-    // lastSnapShort.lastVolume = 0;
     lastSnapShort.turnover = turnover;
-    // lastSnapShort.lastTurnover = 0;
 }
 
 // 打点时间

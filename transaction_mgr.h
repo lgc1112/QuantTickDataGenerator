@@ -19,7 +19,7 @@
 // 实盘交易管理器
 class TransactionMgr
 {
-#pragma region : ctor /dtor
+#pragma region : ctor /dtor 
 public:
     TransactionMgr();
     ~TransactionMgr() = default;

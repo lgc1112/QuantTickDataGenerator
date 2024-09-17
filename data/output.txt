@@ -1,4 +1,4 @@
-BeginTime: 20:14:21
-GenTickNum: 1228718        TickNum:4753        MatchNum:4753        NoMatchNum:0        MatchRate:100%
-EndTime: 20:14:44
-DiffTime: 23s
+BeginTime: 20:21:35
+GenTickNum: 1228718        TickNum:4754        MatchNum:4754        NoMatchNum:0        MatchRate:100%
+EndTime: 20:21:57
+DiffTime: 18s

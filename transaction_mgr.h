@@ -49,7 +49,7 @@ private:
     std::multiset<Order *, OrderCompare> sellOrders_; // 卖出订单有序集合(从小到大)
 
     std::unordered_map<int64_t, std::vector<Transaction *>> pendingTransactions_;
-    std::vector<RawSnapShort> snapShorts_;
+    std::vector<RawSnapShot> snapShorts_;
     int tickTimeSpan_ = 0;
     double preClosePrice_ = 0;
 };

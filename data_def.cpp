@@ -124,7 +124,7 @@ std::string Transaction::ToString() const
            ", isCancel:" + std::to_string(isCancel);
 }
 
-std::string RawSnapShort::ToString() const
+std::string RawSnapShot::ToString() const
 {
     return std::string("instrumentId:") + instrumentId + ", tradingDay:" + tradingDay + ", updateTime:" + updateTime +
            ", updateMillisec:" + std::to_string(updateMillisec) + ", refUpdateTime:" + refUpdateTime +
@@ -150,7 +150,7 @@ bool CompareDouble(double a, double b, double epsilon = 1e-6) {
     return std::abs(a - b) < epsilon;
 }
 
-bool RawSnapShort::Compare(const RawSnapShort &other) const {
+bool RawSnapShot::Compare(const RawSnapShot &other) const {
     if (volume != other.volume || lastPrice != other.lastPrice || !CompareDouble(turnover, other.turnover) )
         return false;
 

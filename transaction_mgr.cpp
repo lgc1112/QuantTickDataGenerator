@@ -308,14 +308,14 @@ void TransactionMgr::OnReceiveTransaction(void *data)
         auto lastPrice = transaction->orderPrice;
         auto turnover = transaction->orderPrice * transVolume;
 
-        auto &snapShort = snapShorts_.back();
-        snapShort.lastPrice = lastPrice;
-        snapShort.volume += transVolume;
-        snapShort.lastVolume += transVolume;
-        snapShort.turnover += turnover;
-        snapShort.lastTurnover += turnover;
-        snapShort.highestPrice = std::max(snapShort.highestPrice, lastPrice);
-        snapShort.lowestPrice = std::min(snapShort.lowestPrice, lastPrice);
+        auto &snapShot = snapShorts_.back();
+        snapShot.lastPrice = lastPrice;
+        snapShot.volume += transVolume;
+        snapShot.lastVolume += transVolume;
+        snapShot.turnover += turnover;
+        snapShot.lastTurnover += turnover;
+        snapShot.highestPrice = std::max(snapShot.highestPrice, lastPrice);
+        snapShot.lowestPrice = std::min(snapShot.lowestPrice, lastPrice);
     }
 
     // std::cout << count << "Recv Transaction : " << transaction->ToString() << std::endl;
@@ -330,9 +330,9 @@ void TransactionMgr::OnTick(int tickTimeSpan)
         return;
 
     // 更新快照
-    auto &snapShort = snapShorts_.back();
-    sprintf(snapShort.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan % 60);
-    // LOG_INFO("tickTimeSpan: %d, %d, %s", tickTimeSpan, tickTimeSpan % 60, snapShort.updateTime);
+    auto &snapShot = snapShorts_.back();
+    sprintf(snapShot.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan % 60);
+    // LOG_INFO("tickTimeSpan: %d, %d, %s", tickTimeSpan, tickTimeSpan % 60, snapShot.updateTime);
 
     // if (curOrders_.size() != buyOrders_.size() + sellOrders_.size())
     //     LOG_ERROR("curOrders_ size: %lu, buyOrders_ size + sellOrders_ size: %lu",
@@ -389,41 +389,41 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     }
 
     // 保存到快照
-    snapShort.askPrice1 = min5SellPrices_[0].first;
-    snapShort.askVolume1 = min5SellPrices_[0].second;
-    snapShort.askPrice2 = min5SellPrices_[1].first;
-    snapShort.askVolume2 = min5SellPrices_[1].second;
-    snapShort.askPrice3 = min5SellPrices_[2].first;
-    snapShort.askVolume3 = min5SellPrices_[2].second;
-    snapShort.askPrice4 = min5SellPrices_[3].first;
-    snapShort.askVolume4 = min5SellPrices_[3].second;
-    snapShort.askPrice5 = min5SellPrices_[4].first;
-    snapShort.askVolume5 = min5SellPrices_[4].second;
+    snapShot.askPrice1 = min5SellPrices_[0].first;
+    snapShot.askVolume1 = min5SellPrices_[0].second;
+    snapShot.askPrice2 = min5SellPrices_[1].first;
+    snapShot.askVolume2 = min5SellPrices_[1].second;
+    snapShot.askPrice3 = min5SellPrices_[2].first;
+    snapShot.askVolume3 = min5SellPrices_[2].second;
+    snapShot.askPrice4 = min5SellPrices_[3].first;
+    snapShot.askVolume4 = min5SellPrices_[3].second;
+    snapShot.askPrice5 = min5SellPrices_[4].first;
+    snapShot.askVolume5 = min5SellPrices_[4].second;
 
-    snapShort.bidPrice1 = max5BuyPrices_[0].first;
-    snapShort.bidVolume1 = max5BuyPrices_[0].second;
-    snapShort.bidPrice2 = max5BuyPrices_[1].first;
-    snapShort.bidVolume2 = max5BuyPrices_[1].second;
-    snapShort.bidPrice3 = max5BuyPrices_[2].first;
-    snapShort.bidVolume3 = max5BuyPrices_[2].second;
-    snapShort.bidPrice4 = max5BuyPrices_[3].first;
-    snapShort.bidVolume4 = max5BuyPrices_[3].second;
-    snapShort.bidPrice5 = max5BuyPrices_[4].first;
-    snapShort.bidVolume5 = max5BuyPrices_[4].second;
+    snapShot.bidPrice1 = max5BuyPrices_[0].first;
+    snapShot.bidVolume1 = max5BuyPrices_[0].second;
+    snapShot.bidPrice2 = max5BuyPrices_[1].first;
+    snapShot.bidVolume2 = max5BuyPrices_[1].second;
+    snapShot.bidPrice3 = max5BuyPrices_[2].first;
+    snapShot.bidVolume3 = max5BuyPrices_[2].second;
+    snapShot.bidPrice4 = max5BuyPrices_[3].first;
+    snapShot.bidVolume4 = max5BuyPrices_[3].second;
+    snapShot.bidPrice5 = max5BuyPrices_[4].first;
+    snapShot.bidVolume5 = max5BuyPrices_[4].second;
 
     int size = snapShorts_.size();
-    if (snapShorts_[size - 2].Compare(snapShort))
+    if (snapShorts_[size - 2].Compare(snapShot))
     {
         LOG_INFO("snapShorts_[size - 2] == snapShorts_[size - 1], size: %lu", size);
         return;
     }
 
     // 保存快照信息
-    auto highestPrice = snapShort.highestPrice;
-    auto lowestPrice = snapShort.lowestPrice;
-    auto lastPrice = snapShort.lastPrice;
-    auto volume = snapShort.volume;
-    auto turnover = snapShort.turnover;
+    auto highestPrice = snapShot.highestPrice;
+    auto lowestPrice = snapShot.lowestPrice;
+    auto lastPrice = snapShot.lastPrice;
+    auto volume = snapShot.volume;
+    auto turnover = snapShot.turnover;
 
     // 切换到下一个快照
     snapShorts_.emplace_back();

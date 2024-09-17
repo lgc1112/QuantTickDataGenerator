@@ -57,7 +57,7 @@ struct RawTransaction
     std::string ToString() const;
 };
 
-struct RawSnapShort
+struct RawSnapShot
 {
     char instrumentId[32]; // 合约代码
     char tradingDay[9];    // 成交日期
@@ -91,7 +91,7 @@ struct RawSnapShort
     double preClosePrice = 0;   // 昨天收盘价
 
     std::string ToString() const;
-    bool Compare(const RawSnapShort &other) const;
+    bool Compare(const RawSnapShot &other) const;
 };
 
 struct Order;

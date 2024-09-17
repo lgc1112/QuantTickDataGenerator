@@ -22,8 +22,8 @@ enum DataEventType
 class LiveTradingDataSimulator
 {
 public:
-    LiveTradingDataSimulator() { }
-    ~LiveTradingDataSimulator() { }
+    LiveTradingDataSimulator() = default;
+    ~LiveTradingDataSimulator() = default;
 
     // 初始化函数
     int Init();
@@ -47,3 +47,4 @@ private:
     std::vector<Order> orders_;
     std::vector<Transaction> transactions_;
 };
+

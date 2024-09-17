@@ -1,7 +1,7 @@
 /*
  * @file: 
  * @Author: ligengchao
- * @copyright: Tencent Technology (Shenzhen) Company Limited
+ * @copyright: 
  * @Date: 2024-09-16 08:51:43
  * @edit: ligengchao
  * @brief: 
@@ -64,6 +64,11 @@ void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
     }
 
     file.close();
+}
+
+TransactionMgr::TransactionMgr()
+: snapshots_(2)
+{
 }
 
 void TransactionMgr::SetPreClosePrice(double price)

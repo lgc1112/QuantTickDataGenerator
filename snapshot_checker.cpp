@@ -1,7 +1,7 @@
 /*
  * @file: 
  * @Author: ligengchao
- * @copyright: Tencent Technology (Shenzhen) Company Limited
+ * @copyright: 
  * @Date: 2024-09-17 17:35:56
  * @edit: ligengchao
  * @brief: 
@@ -10,13 +10,13 @@
 #include <iostream>
 #include <fstream>
 #include <system_error>
+#include <cstring>
 
 #include "snapshot_checker.h"
 #include "logger.h"
 
-double
-SnapshotChecker::CheckTickDataExistPercent(const std::string &filename,
-                                           const std::vector<RawSnapshot> &snapshots)
+double TickDataChecker::CheckTickDataExistPercent(const std::string &filename,
+                                                  const std::vector<RawSnapshot> &snapshots)
 {
     // 构建快照map {volume : snapshots}
     std::unordered_map<int64_t, std::vector<const RawSnapshot *>> snapshotsMap;
@@ -36,10 +36,11 @@ SnapshotChecker::CheckTickDataExistPercent(const std::string &filename,
     std::string temps;
     char tmpc;
     int totalCount = 0, successCount = 0;
-    
+
     // 跳过前45行
     int currentLine = 1;
-    while (currentLine++ <= 45 && std::getline(file, line));
+    while (currentLine++ <= 45 && std::getline(file, line))
+        ;
 
     // 读取到4799行
     while (std::getline(file, line) && currentLine++ <= 4799)
@@ -97,7 +98,7 @@ SnapshotChecker::CheckTickDataExistPercent(const std::string &filename,
         ss >> rawSnapshot.highestPrice >> tmpc;
         ss >> rawSnapshot.lowestPrice >> tmpc;
         ss >> rawSnapshot.preClosePrice >> tmpc;
-        
+
         auto it = snapshotsMap.find(rawSnapshot.volume);
         if (it == snapshotsMap.end())
         {
@@ -118,12 +119,20 @@ SnapshotChecker::CheckTickDataExistPercent(const std::string &filename,
 
         if (!success)
             LOG_WARN("snapshot not found, volume: %lld, %s", rawSnapshot.volume, rawSnapshot.ToString().c_str());
-        
+
         // if (totalCount == 1000)
         //     break;
     }
 
-    LOG_INFO("successCount: %d, totalCount: %d, success percent: %f%", successCount, totalCount, 1.0 * successCount / totalCount * 100);
+    // 打印匹配情况
+    std::cout << "GenTickNum: " << snapshots.size() << "        TickNum:" << totalCount
+              << "        MatchNum:" << successCount << "        NoMatchNum:" << totalCount - successCount
+              << "        MatchRate:" << 1.0 * successCount / totalCount * 100 << "%" << std::endl;
+
+    LOG_INFO("successCount: %d, totalCount: %d, success percent: %f%",
+             successCount,
+             totalCount,
+             1.0 * successCount / totalCount * 100);
 
     return 0;
 }

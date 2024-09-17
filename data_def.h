@@ -1,7 +1,7 @@
 /*
  * @file: 
  * @Author: ligengchao
- * @copyright: Tencent Technology (Shenzhen) Company Limited
+ * @copyright: 
  * @Date: 2024-09-16 08:53:49
  * @edit: ligengchao
  * @brief: 
@@ -12,11 +12,12 @@
 #include <cstdio>
 #include <ctime>
 #include <chrono>
-#include <cstring> // 包含对 memcpy 的声明
-#include <string>
-#include <set>
 #include <climits>
 
+#include <string>
+#include <set>
+
+// 原始订单数据
 struct RawOrder
 {
     char instrumentId[32];     // 合约代码
@@ -35,6 +36,7 @@ struct RawOrder
     std::string ToString() const;
 };
 
+// 原始交易数据
 struct RawTransaction
 {
     char instrumentId[32];     // 合约代码
@@ -57,6 +59,7 @@ struct RawTransaction
     std::string ToString() const;
 };
 
+// 原始快照数据
 struct RawSnapshot
 {
     char instrumentId[32]; // 合约代码
@@ -84,23 +87,25 @@ struct RawSnapshot
 
     int64_t openInterest = 0; // 忽略，不要管，无需关注
 
-    double upperLimitPrice = 0; // 涨停板价
-    double lowerLimitPrice = 0; // 跌停板价
-    double highestPrice = 0;    // 最高价
-    double lowestPrice = INT_MAX;     // 最低价
-    double preClosePrice = 0;   // 昨天收盘价
+    double upperLimitPrice = 0;   // 涨停板价
+    double lowerLimitPrice = 0;   // 跌停板价
+    double highestPrice = 0;      // 最高价
+    double lowestPrice = INT_MAX; // 最低价
+    double preClosePrice = 0;     // 昨天收盘价
 
     std::string ToString() const;
     bool Compare(const RawSnapshot &other) const;
 };
 
 struct Order;
+// Order比较函数
 class OrderCompare
 {
 public:
     bool operator()(const Order *a, const Order *b) const;
 };
 
+// 订单类
 struct Order
 {
     uint64_t orderID = 0;          // 委托号，交易所Order唯一编号
@@ -117,6 +122,7 @@ struct Order
     std::string ToString() const;
 };
 
+// 交易类
 struct Transaction
 {
     char instrumentId[32];         // 合约代码

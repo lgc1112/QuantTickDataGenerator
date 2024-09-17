@@ -1,16 +1,16 @@
 /*
  * @file: 
  * @Author: ligengchao
- * @copyright: Tencent Technology (Shenzhen) Company Limited
+ * @copyright: 
  * @Date: 2024-09-17 13:26:52
  * @edit: ligengchao
  * @brief: 
  */
 #include <cmath>
+#include <cstring>
 
 #include "data_def.h"
 #include "logger.h"
-
 
 bool OrderCompare::operator()(const Order *a, const Order *b) const
 {
@@ -32,14 +32,9 @@ void Order::FromRawOrder(const RawOrder &rawOrder)
 
     // 解析refUpdateTimeSpan
     strptime(rawOrder.refUpdateTime, "%H:%M:%S", &timeInfo); // 解析时间
-    // strptime(rawOrder.tradingDay, "%Y%m%d", &timeInfo2);      // 解析日期
     // 转换为自1970年1月1日以来的秒数
     timeInSeconds = std::mktime(&timeInfo);
     refUpdateTimeSpan = static_cast<int64_t>(timeInSeconds) * 1000000 + rawOrder.refUpdateMicrosec;
-    // std::cout << "timeInSeconds:" << timeInSeconds << ", timeInSeconds2:" << timeInSeconds2 << std::endl;
-    // std::cout << "updateTime:" << rawOrder.updateTime << ", refUpdateTimeSpan:" << rawOrder.refUpdateTime << std::endl;
-    // std::cout << "updateTime:" << rawOrder.updateMillisec << ", refUpdateTimeSpan:" << rawOrder.refUpdateMicrosec << std::endl;
-    // std::cout << "updateTimeSpan:" << updateTimeSpan << ", refUpdateTimeSpan:" << refUpdateTimeSpan << std::endl;
 
     orderPrice = rawOrder.orderPrice;
     orderVolume = rawOrder.orderVolume;
@@ -146,42 +141,28 @@ std::string RawSnapshot::ToString() const
            ", lowestPrice:" + std::to_string(lowestPrice) + ", preClosePrice:" + std::to_string(preClosePrice);
 };
 
-bool CompareDouble(double a, double b, double epsilon = 1e-6) {
+bool CompareDouble(double a, double b, double epsilon = 1e-6)
+{
     return std::abs(a - b) < epsilon;
 }
 
-bool RawSnapshot::Compare(const RawSnapshot &other) const {
-    if (volume != other.volume || !CompareDouble(lastPrice, other.lastPrice) || !CompareDouble(turnover, other.turnover, 1) )
+bool RawSnapshot::Compare(const RawSnapshot &other) const
+{
+    if (volume != other.volume || lastPrice != other.lastPrice || !CompareDouble(turnover, other.turnover, 1))
     {
         // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
         return false;
     }
 
-    // if (askPrice1 != other.askPrice1 || askPrice2 != other.askPrice2 || askPrice3 != other.askPrice3 ||
-    //     askPrice4 != other.askPrice4 || askPrice5 != other.askPrice5)
-    // {
-    //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
-    //     return false;
-    // }
-
-    if (!CompareDouble(askPrice1, other.askPrice1) || !CompareDouble(askPrice2, other.askPrice2) ||
-        !CompareDouble(askPrice3, other.askPrice3) || !CompareDouble(askPrice4, other.askPrice4) ||
-        !CompareDouble(askPrice5, other.askPrice5))
+    if (askPrice1 != other.askPrice1 || askPrice2 != other.askPrice2 || askPrice3 != other.askPrice3 ||
+        askPrice4 != other.askPrice4 || askPrice5 != other.askPrice5)
     {
         // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
         return false;
     }
 
-    // if (bidPrice1 != other.bidPrice1 || bidPrice2 != other.bidPrice2 || bidPrice3 != other.bidPrice3 ||
-    //     bidPrice4 != other.bidPrice4 || bidPrice5 != other.bidPrice5)
-    // {
-    //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
-    //     return false;
-    // }
-
-    if (!CompareDouble(bidPrice1, other.bidPrice1) || !CompareDouble(bidPrice2, other.bidPrice2) ||
-        !CompareDouble(bidPrice3, other.bidPrice3) || !CompareDouble(bidPrice4, other.bidPrice4) ||
-        !CompareDouble(bidPrice5, other.bidPrice5))
+    if (bidPrice1 != other.bidPrice1 || bidPrice2 != other.bidPrice2 || bidPrice3 != other.bidPrice3 ||
+        bidPrice4 != other.bidPrice4 || bidPrice5 != other.bidPrice5)
     {
         // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
         return false;
@@ -201,18 +182,13 @@ bool RawSnapshot::Compare(const RawSnapshot &other) const {
         return false;
     }
 
-    // if (highestPrice != other.highestPrice || lowestPrice != other.lowestPrice)
-    // {
-    //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
-    //     return false;
-    // }
+    if (highestPrice != other.highestPrice || lowestPrice != other.lowestPrice)
+    {
+        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+        return false;
+    }
 
-    // if (!CompareDouble(upperLimitPrice, other.upperLimitPrice) || !CompareDouble(lowerLimitPrice, other.lowerLimitPrice))
-    // {
-    //     LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
-    //     return false;
-    // }
-
+    // 生成的表格这两项也是100%相同的
     // if (!CompareDouble(highestPrice, other.highestPrice) || !CompareDouble(lowestPrice, other.lowestPrice || !CompareDouble(preClosePrice, other.preClosePrice)))
     // {
     //     // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());

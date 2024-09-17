@@ -1,7 +1,7 @@
 /*
  * @file: 
  * @Author: ligengchao
- * @copyright: Tencent Technology (Shenzhen) Company Limited
+ * @copyright: 
  * @Date: 2024-09-16 22:50:37
  * @edit: ligengchao
  * @brief: 
@@ -22,6 +22,7 @@
 #include <chrono>
 #include <iomanip>
 #include <ctime>
+#include <cstring> 
 
 #include "live_tarding_data_simulator.h"
 #include "logger.h"
@@ -31,7 +32,6 @@ void LiveTradingDataSimulator::_ReadRawOrders(const std::string &filename, std::
 {
     std::ifstream file(filename);
     std::string line;
-    // file.open(filename);
     if (!file)
     {
         std::error_code ec(errno, std::generic_category());
@@ -47,7 +47,6 @@ void LiveTradingDataSimulator::_ReadRawOrders(const std::string &filename, std::
     std::getline(file, line); // 跳过第一行
     while (std::getline(file, line))
     {
-        // LOG_DEBUG("rawLine: %s", line.c_str());
         std::stringstream ss(line);
 
         std::getline(ss, temps, ',');
@@ -78,17 +77,11 @@ void LiveTradingDataSimulator::_ReadRawOrders(const std::string &filename, std::
 
         order.FromRawOrder(rawOrder);
         orders.push_back(order);
-
-        // if (++count == 10000)
-        //     break;
-        // LOG_DEBUG("Read raw order:%s", rawOrder.ToString().c_str());
-        // LOG_DEBUG("Read order:%s", order.ToString().c_str());
     }
 
     file.close();
 }
 
-// 函数用于从CSV文件中读取RawTransaction数据
 void LiveTradingDataSimulator::_ReadRawTransactions(const std::string &filename, std::vector<Transaction> &transactions)
 {
     std::ifstream file(filename);
@@ -142,12 +135,6 @@ void LiveTradingDataSimulator::_ReadRawTransactions(const std::string &filename,
 
         transaction.FromRawTransaction(rawTransaction);
         transactions.push_back(transaction);
-
-        // if (++count == 1000)
-        //     break;
-
-        // LOG_DEBUG("Read raw transaction:%s", rawTransaction.ToString().c_str());
-        // LOG_DEBUG("Read transaction:%s", transaction.ToString().c_str());
     }
     file.close();
 }
@@ -165,10 +152,9 @@ int LiveTradingDataSimulator::Init()
 
     _ReadRawOrders("data/Orders.csv", std::ref(orders_));
     _ReadRawTransactions("data/Trans.csv", std::ref(transactions_));
-    int orderSize = orders_.size(), transactionSize = transactions_.size();
 
-    LOG_INFO("Order: %d", orderSize);
-    LOG_INFO("Transaction: %d", transactionSize);
+    LOG_INFO("Order: %d", orders_.size());
+    LOG_INFO("Transaction: %d", transactions_.size());
 
     return 0;
 }
@@ -177,14 +163,10 @@ void LiveTradingDataSimulator::Run()
 {
     int orderSize = orders_.size(), transactionSize = transactions_.size();
     int curOrderIdx = 0, curTransactionIdx = 0;
-    // int count = 0;
     // 创建网络线程模拟读取交易所数据
     // 模拟实盘情况按照本地消息接收时间(RefUpdateTime + RefUpdateMillisec)顺序处理每一条Order或Transaction
     while (curOrderIdx < orderSize || curTransactionIdx < transactionSize)
     {
-        // if (++count == 10)
-        //     exit(0);
-
         if (curOrderIdx < orderSize && curTransactionIdx < transactionSize)
         {
             auto &latestOrder = orders_[curOrderIdx];

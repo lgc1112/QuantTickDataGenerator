@@ -108,15 +108,6 @@ struct RawTransaction
                ", direction:" + direction + ", orderKind:" + orderKind + ", functionCode:" + functionCode +
                ", askOrderID:" + std::to_string(askOrderID) + ", bidOrderID:" + std::to_string(bidOrderID) +
                ", channelId:" + std::to_string(channelId);
-
-        // return std::string("instrumentId:") + instrumentId + ", tradingDay:" + tradingDay +
-        //        ", updateTime:" + updateTime + ", updateMillisec:" + std::to_string(updateMillisec) +
-        //        ", refUpdateTime:" + refUpdateTime + ", refUpdateMicrosec:" + std::to_string(refUpdateMicrosec) +
-        //        ", tradeId:" + std::to_string(tradeId) + ", tradePrice:" + std::to_string(tradePrice) +
-        //        ", tradeVolume:" + std::to_string(tradeVolume) + ", turnover:" + std::to_string(turnover) +
-        //        ", direction:" + std::to_string(direction) + ", orderKind:" + std::to_string(orderKind) +
-        //        ", functionCode:" + std::to_string(functionCode) + ", askOrderID:" + std::to_string(askOrderID) +
-        //        ", bidOrderID:" + std::to_string(bidOrderID) + ", channelId:" + std::to_string(channelId);
     }
 };
 

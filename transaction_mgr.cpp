@@ -78,65 +78,23 @@ void TransactionMgr::OnReceiveOrder(void *data)
     }
 
     curOrders_.emplace(orderID, order);
+    // LOG_DEBUG("Add order: %lld, refUpdateTimeSpan:%lld", order->orderID, order->refUpdateTimeSpan);
 
+    // 处理正在等待order的transaction
     auto it = pendingTransactions_.find(orderID);
     if (it != pendingTransactions_.end())
     {
         auto &transactions = it->second;
         // LOG_DEBUG("erase pendding orderId:%lld, transactions:%lu", orderID, transactions.size());
-        for (Transaction *transaction : transactions)
+        // 遍历处理所有等待的transaction
+        for (auto transaction : transactions)
         {
-            auto peerOrderID = transaction->askOrderID == orderID ? transaction->bidOrderID : transaction->askOrderID;
-            if (peerOrderID != 0)
-            {
-                // LOG_DEBUG("peerOrderID :%lld", peerOrderID);
-                auto peerIt = pendingTransactions_.find(peerOrderID);
-                if (peerIt == pendingTransactions_.end())
-                {
-                    // LOG_ERROR("Not found peerOrderID: %lld", peerOrderID);
-                    return;
-                }
-
-                std::vector<Transaction *> &peerTransactions = peerIt->second;
-                // auto findIt = std::find(peerTransactions.begin(), peerTransactions.end(), transaction);
-                // 使用遍历删除所有指向 transactionToRemove 的指针
-                auto findIt = peerTransactions.end();
-                for (auto iTt = peerTransactions.begin(); iTt != peerTransactions.end();)
-                {
-                    if (*iTt == transaction)
-                    {
-                        findIt = iTt; // 删除元素并更新迭代器
-                        break;
-                    }
-                    else
-                    {
-                        ++iTt; // 移动迭代器
-                    }
-                }
-
-                if (findIt == peerTransactions.end())
-                {
-                    LOG_ERROR("Not found peerTransaction: %lld", peerOrderID);
-                    return;
-                }
-
-                // LOG_DEBUG("erase pendding peerOrderID: %lld", peerOrderID);
-                peerTransactions.erase(findIt);
-
-                if (peerTransactions.empty())
-                {
-                    pendingTransactions_.erase(peerIt);
-                    // LOG_DEBUG("erase pendding peerOrderID:%lld, pendingTransactions_:%lu", peerOrderID, pendingTransactions_.size());
-                }
-            }
-            
             // LOG_DEBUG("erase pendding orderId:%lld, pendingTransactions_:%lu", orderID, pendingTransactions_.size());
             OnReceiveTransaction(transaction);
         }
 
         pendingTransactions_.erase(it);
     }
-    // LOG_DEBUG("order: %lld, refUpdateTimeSpan:%lld", order->orderID, order->refUpdateTimeSpan);
 
     // std::cout << count << ": " << order->ToString() << std::endl;
     // if (++count == 10)
@@ -199,11 +157,18 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     // 如果不是成交，则只要有一个订单不满足就不处理
     if (!transaction->isCancel)
     {
-        // 任意一个订单不存在
-        if (askIt == curOrders_.end() || bidIt == curOrders_.end())
+        // 卖单不存在,则挂起等待卖单
+        if (askIt == curOrders_.end())
         {
             // LOG_WARN("pending trade, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
             pendingTransactions_[askOrderID].push_back(transaction);
+            return;
+        }
+
+        // 买单不存在,则挂起等待买单
+        if (bidIt == curOrders_.end())
+        {
+            // LOG_WARN("pending trade, askOrderID: %lld, bidOrderID: %lld", askOrderID, bidOrderID);
             pendingTransactions_[bidOrderID].push_back(transaction);
             return;
         }
@@ -399,6 +364,8 @@ void TransactionMgr::OnTick(int tickTimeSpan)
 
     // 清理快照信息
     auto &lastSnapShort = snapShorts_.back();
+    lastSnapShort.lowerLimitPrice = snapShort.lowerLimitPrice;
+    lastSnapShort.highestPrice = snapShort.highestPrice;
     lastSnapShort.lastPrice = snapShort.lastPrice;
     lastSnapShort.volume = snapShort.volume;
     lastSnapShort.lastVolume = 0;

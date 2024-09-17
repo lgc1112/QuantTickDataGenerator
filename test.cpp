@@ -51,7 +51,6 @@ int main()
     // 启动实盘数据模拟器
     liveTradingDataSimulator.Run();
 
-
     // 生成tick数据
     std::cout << "GenTickNum: " << transMgr.GetSnapshotNum() << std::endl; 
     transMgr.DumpSnapshotToFile("data/GenTick.csv");

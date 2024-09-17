@@ -11,24 +11,14 @@
 #include <unordered_map>
 #include <vector>
 #include <set>
-#include <string>
+#include <queue>
 #include <climits>
 
 #include "data_def.h"
 
-
 // 交易管理器
 class TransactionMgr
 {
-private:
-    struct Compare {
-        bool operator()(const Order* a, const Order* b) const {
-            if (a.val == b.val) {
-                return a.id < b.id;
-            }
-            return a.val < b.val;
-        }
-    };
 
 public:
     TransactionMgr()
@@ -36,7 +26,7 @@ public:
     {
         snapShorts_[0].lowestPrice = INT_MAX;
     };
-    ~TransactionMgr(){};
+    ~TransactionMgr() = default;
 
     // 将快照数据写入文件
     void DumpSnapshotToFile(const std::string &path);
@@ -55,7 +45,8 @@ private:
 
 private:
     std::unordered_map<int64_t, Order *> curOrders_; // 当前订单
-    std::set<Order *, Compare> datas; 
+    std::multiset<Order *, OrderCompare> buyOrders_;            // 买入订单有序集合(从小到大)
+    std::multiset<Order *, OrderCompare> sellOrders_;           // 卖出订单有序集合(从小到大)
 
     std::unordered_map<int64_t, std::vector<Transaction *>> pendingTransactions_;
     std::vector<RawSnapShort> snapShorts_;

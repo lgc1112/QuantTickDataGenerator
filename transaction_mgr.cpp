@@ -77,6 +77,11 @@ void TransactionMgr::OnReceiveOrder(void *data)
         return;
     }
 
+    if (order->isBuy)
+        order->buyOrdersIter = buyOrders_.emplace(order);
+    else
+        order->sellOrdersIter = sellOrders_.emplace(order);
+
     curOrders_.emplace(orderID, order);
     // LOG_DEBUG("Add order: %lld, refUpdateTimeSpan:%lld", order->orderID, order->refUpdateTimeSpan);
 
@@ -115,14 +120,16 @@ void TransactionMgr::OnReceiveTransaction(void *data)
                  tickTimeSpan_,
                  tickTimeSpan_ / 3600,
                  tickTimeSpan_ / 60 % 60,
-                 tickTimeSpan_ % 60, transaction->ToString().c_str(), pendingTransactions_.size());
+                 tickTimeSpan_ % 60,
+                 transaction->ToString().c_str(),
+                 pendingTransactions_.size());
         tickTimeSpan_ = nextTick;
         OnTick(tickTimeSpan_);
         nextTick = _GetNextTickTimeSpan();
     }
     // LOG_INFO("tickTimeSpan_: %d, nextTick: %d", secondsInDay, nextTick);
     // exit(0);
-    
+
     auto askOrderID = transaction->askOrderID;
     auto bidOrderID = transaction->bidOrderID;
 
@@ -154,7 +161,7 @@ void TransactionMgr::OnReceiveTransaction(void *data)
     auto askIt = askOrderID == 0 ? curOrders_.end() : curOrders_.find(askOrderID);
     auto bidIt = bidOrderID == 0 ? curOrders_.end() : curOrders_.find(bidOrderID);
 
-    // 如果不是成交，则只要有一个订单不满足就不处理
+    // 如果不是成交，则只要有一个订单不满足就挂起不处理
     if (!transaction->isCancel)
     {
         // 卖单不存在,则挂起等待卖单
@@ -198,18 +205,23 @@ void TransactionMgr::OnReceiveTransaction(void *data)
         if (remainVolume < 0)
         {
             LOG_ERROR("err remainVolume, askOrderID: %lld, bidOrderID: %lld, remainVolume: %d, transaction:[%s], "
-                        "order:[%s]",
-                        askOrderID,
-                        bidOrderID,
-                        remainVolume,
-                        transaction->ToString().c_str(),
-                        curOrders_.find(askOrderID)->second->ToString().c_str());
+                      "order:[%s]",
+                      askOrderID,
+                      bidOrderID,
+                      remainVolume,
+                      transaction->ToString().c_str(),
+                      curOrders_.find(askOrderID)->second->ToString().c_str());
             return;
         }
 
         // 该订单已全部取消
         if (remainVolume == 0)
         {
+            if (askIt->second->isBuy)
+                buyOrders_.erase(askIt->second->buyOrdersIter);
+            else
+                sellOrders_.erase(askIt->second->sellOrdersIter);
+
             curOrders_.erase(askIt);
             bidIt = bidOrderID == 0 ? curOrders_.end() : curOrders_.find(bidOrderID);
             // LOG_ERROR("err curOrders_ %lu", curOrders_.size());
@@ -227,15 +239,20 @@ void TransactionMgr::OnReceiveTransaction(void *data)
         if (remainVolume < 0)
         {
             LOG_ERROR("err remainVolume, askOrderID: %lld, bidOrderID: %lld, remainVolume: %d",
-                        askOrderID,
-                        bidOrderID,
-                        remainVolume);
+                      askOrderID,
+                      bidOrderID,
+                      remainVolume);
             return;
         }
 
         // 该订单已全部取消
         if (remainVolume == 0)
         {
+            if (bidIt->second->isBuy)
+                buyOrders_.erase(bidIt->second->buyOrdersIter);
+            else
+                sellOrders_.erase(bidIt->second->sellOrdersIter);
+
             curOrders_.erase(bidIt);
             // LOG_ERROR("err curOrders_ %lu", curOrders_.size());
         }
@@ -273,12 +290,52 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     // 更新快照
     auto &snapShort = snapShorts_.back();
     sprintf(snapShort.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan_ % 60);
-    // snapShort.updateTime = tickTimeSpan;
+    if (curOrders_.size() != buyOrders_.size() + sellOrders_.size())
+        LOG_ERROR("curOrders_ size: %lu, buyOrders_ size + sellOrders_ size: %lu",
+                  curOrders_.size(),
+                  buyOrders_.size() + sellOrders_.size());
+    
+    // // LOG_DEBUG("max buyOrders_: %.3f, min sellOrders_: %.3f", (*buyOrders_.rbegin())->orderPrice, (*sellOrders_.begin())->orderPrice);
+    // std::array<std::pair<double, int64_t>, 5> max5BuyPrices_;  // {prices : volume}
+    // std::array<std::pair<double, int64_t>, 5> min5SellPrices_; // {prices : volume}
+    // int idx = 0;
+    // for (auto it = buyOrders_.rbegin(); it != buyOrders_.rend(); it++)
+    // {
+    //     auto prices = (*it)->orderPrice;
+    //     auto maxPrice = max5BuyPrices_[idx].first;
+    //     if (prices == maxPrice)
+    //     {
+    //         max5BuyPrices_[idx].second += (*it)->orderVolume;
+    //     }
+    //     else
+    //     {
+    //         if (idx == 4 && maxPrice != 0)
+    //             break;
+
+    //         max5BuyPrices_[maxPrice == 0 ? idx : ++idx] = {prices, (*it)->orderVolume};
+    //     }
+    // }
+
+    // idx = 0;
+    // for (auto it = sellOrders_.begin(); it != sellOrders_.end(); it++)
+    // {
+    //     auto prices = (*it)->orderPrice;
+    //     auto minPrice = min5SellPrices_[idx].first;
+    //     if (prices == minPrice)
+    //     {
+    //         min5SellPrices_[idx].second += (*it)->orderVolume;
+    //     }
+    //     else
+    //     {
+    //         if (idx == 4 && minPrice != 0)
+    //             break;
+
+    //         min5SellPrices_[minPrice == 0 ? idx : ++idx] = {prices, (*it)->orderVolume};
+    //     }
+    // }
 
     std::vector<std::pair<double, int64_t>> max5BuyPrices_(5);  // {prices : volume}
     std::vector<std::pair<double, int64_t>> min5SellPrices_(5); // {prices : volume}
-    // std::vector<std::pair<double, int64_t>> min5SellPrices_(5, {std::numeric_limits<double>::max(), 0}); // {prices : volume}
-
     // 遍历orders
     for (const auto &pair : curOrders_)
     {

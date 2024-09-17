@@ -63,7 +63,7 @@ int main()
               << std::setfill('0') << endLocalTime->tm_min << ":" << std::setw(2) << std::setfill('0')
               << endLocalTime->tm_sec << std::endl;
 
-    // std::cout << "DiffTime: " << endTime - beginTime << "s" << std::endl;
+    std::cout << "DiffTime: " << endTime - beginTime << "s" << std::endl;
 
     return 0;
 }

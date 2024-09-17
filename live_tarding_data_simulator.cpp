@@ -1,9 +1,9 @@
 /*
  * @file: 
- * @Author: regangcli
+ * @Author: ligengchao
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2024-09-16 22:50:37
- * @edit: regangcli
+ * @edit: ligengchao
  * @brief: 
  */
 #include <climits>
@@ -25,7 +25,6 @@
 
 #include "live_tarding_data_simulator.h"
 #include "logger.h"
-
 
 // 函数用于从CSV文件中读取RawOrder数据
 void LiveTradingDataSimulator::_ReadRawOrders(const std::string &filename, std::vector<Order> &orders)
@@ -50,7 +49,7 @@ void LiveTradingDataSimulator::_ReadRawOrders(const std::string &filename, std::
     {
         // LOG_DEBUG("rawLine: %s", line.c_str());
         std::stringstream ss(line);
-        
+
         std::getline(ss, temps, ',');
         strncpy(rawOrder.instrumentId, temps.c_str(), sizeof(rawOrder.instrumentId) - 1);
         rawOrder.instrumentId[sizeof(rawOrder.instrumentId) - 1] = '\0';
@@ -68,7 +67,7 @@ void LiveTradingDataSimulator::_ReadRawOrders(const std::string &filename, std::
         std::getline(ss, temps, ',');
         strncpy(rawOrder.refUpdateTime, temps.c_str(), sizeof(rawOrder.refUpdateTime) - 1);
         rawOrder.refUpdateTime[sizeof(rawOrder.refUpdateTime) - 1] = '\0';
-        
+
         ss >> rawOrder.refUpdateMicrosec >> tmpc;
         ss >> rawOrder.orderSysID >> tmpc;
         ss >> rawOrder.orderPrice >> tmpc;
@@ -100,7 +99,7 @@ void LiveTradingDataSimulator::_ReadRawTransactions(const std::string &filename,
         LOG_ERROR("Error opening file %s, err:%s'", filename.c_str(), ec.message().c_str());
         return;
     }
-    
+
     RawTransaction rawTransaction;
     Transaction transaction;
     std::string temps;
@@ -128,7 +127,7 @@ void LiveTradingDataSimulator::_ReadRawTransactions(const std::string &filename,
         std::getline(ss, temps, ',');
         strncpy(rawTransaction.refUpdateTime, temps.c_str(), sizeof(rawTransaction.refUpdateTime) - 1);
         rawTransaction.refUpdateTime[sizeof(rawTransaction.refUpdateTime) - 1] = '\0';
-        
+
         ss >> rawTransaction.refUpdateMicrosec >> tmpc;
         ss >> rawTransaction.tradeId >> tmpc;
         ss >> rawTransaction.tradePrice >> tmpc;
@@ -149,7 +148,6 @@ void LiveTradingDataSimulator::_ReadRawTransactions(const std::string &filename,
 
         // LOG_DEBUG("Read raw transaction:%s", rawTransaction.ToString().c_str());
         // LOG_DEBUG("Read transaction:%s", transaction.ToString().c_str());
-
     }
     file.close();
 }
@@ -169,7 +167,7 @@ int LiveTradingDataSimulator::Init()
     _ReadRawTransactions("data/Trans.csv", std::ref(transactions_));
     int orderSize = orders_.size(), transactionSize = transactions_.size();
 
-    LOG_INFO("Order: %d", orderSize);   
+    LOG_INFO("Order: %d", orderSize);
     LOG_INFO("Transaction: %d", transactionSize);
 
     return 0;
@@ -235,11 +233,6 @@ void LiveTradingDataSimulator::Run()
                 handler(&latestTransaction);
         }
     }
-}
-
-double LiveTradingDataSimulator::CheckTickDataExistPercent(const std::string &filename) {
-    
-    return 0;
 }
 
 void LiveTradingDataSimulator::RegisterEventHandler(DataEventType event, std::function<void(void *)> handler)

@@ -1,9 +1,9 @@
 /*
  * @file: 
- * @Author: regangcli
+ * @Author: ligengchao
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2024-09-16 08:53:49
- * @edit: regangcli
+ * @edit: ligengchao
  * @brief: 
  */
 #pragma once
@@ -57,7 +57,7 @@ struct RawTransaction
     std::string ToString() const;
 };
 
-struct RawSnapShot
+struct RawSnapshot
 {
     char instrumentId[32]; // 合约代码
     char tradingDay[9];    // 成交日期
@@ -91,7 +91,7 @@ struct RawSnapShot
     double preClosePrice = 0;   // 昨天收盘价
 
     std::string ToString() const;
-    bool Compare(const RawSnapShot &other) const;
+    bool Compare(const RawSnapshot &other) const;
 };
 
 struct Order;

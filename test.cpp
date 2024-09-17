@@ -15,9 +15,10 @@
 #include <iomanip>
 #include <ctime>
 
+#include "logger.h"
 #include "transaction_mgr.h"
 #include "live_tarding_data_simulator.h"
-#include "logger.h"
+#include "snapshot_checker.h"
 
 int main()
 {
@@ -53,8 +54,9 @@ int main()
     liveTradingDataSimulator.Run();
 
     // 生成tick数据
-    std::cout << "GenTickNum: " << transMgr.GetSnapshotNum() << std::endl; 
+    std::cout << "GenTickNum: " << transMgr.GetSnapshotNum() << std::endl;
     transMgr.DumpSnapshotToFile("data/GenTick.csv");
+
     // 获取当前时间
     std::time_t endTime = std::time(0);
     std::tm *endLocalTime = std::localtime(&endTime);
@@ -62,6 +64,8 @@ int main()
     std::cout << "EndTime: " << std::setw(2) << std::setfill('0') << endLocalTime->tm_hour << ":" << std::setw(2)
               << std::setfill('0') << endLocalTime->tm_min << ":" << std::setw(2) << std::setfill('0')
               << endLocalTime->tm_sec << std::endl;
+
+    SnapshotChecker::CheckTickDataExistPercent("data/Tick.csv", transMgr.GetSnapshot());
 
     std::cout << "DiffTime: " << endTime - beginTime << "s" << std::endl;
 

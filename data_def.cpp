@@ -1,9 +1,9 @@
 /*
  * @file: 
- * @Author: regangcli
+ * @Author: ligengchao
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2024-09-17 13:26:52
- * @edit: regangcli
+ * @edit: ligengchao
  * @brief: 
  */
 #include <cmath>
@@ -124,7 +124,7 @@ std::string Transaction::ToString() const
            ", isCancel:" + std::to_string(isCancel);
 }
 
-std::string RawSnapShot::ToString() const
+std::string RawSnapshot::ToString() const
 {
     return std::string("instrumentId:") + instrumentId + ", tradingDay:" + tradingDay + ", updateTime:" + updateTime +
            ", updateMillisec:" + std::to_string(updateMillisec) + ", refUpdateTime:" + refUpdateTime +
@@ -150,9 +150,12 @@ bool CompareDouble(double a, double b, double epsilon = 1e-6) {
     return std::abs(a - b) < epsilon;
 }
 
-bool RawSnapShot::Compare(const RawSnapShot &other) const {
-    if (volume != other.volume || lastPrice != other.lastPrice || !CompareDouble(turnover, other.turnover) )
+bool RawSnapshot::Compare(const RawSnapshot &other) const {
+    if (volume != other.volume || !CompareDouble(lastPrice, other.lastPrice) || !CompareDouble(turnover, other.turnover, 1) )
+    {
+        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
         return false;
+    }
 
     // if (askPrice1 != other.askPrice1 || askPrice2 != other.askPrice2 || askPrice3 != other.askPrice3 ||
     //     askPrice4 != other.askPrice4 || askPrice5 != other.askPrice5)
@@ -204,11 +207,11 @@ bool RawSnapShot::Compare(const RawSnapShot &other) const {
     //     return false;
     // }
 
-    if (!CompareDouble(upperLimitPrice, other.upperLimitPrice) || !CompareDouble(lowerLimitPrice, other.lowerLimitPrice))
-    {
-        // LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
-        return false;
-    }
+    // if (!CompareDouble(upperLimitPrice, other.upperLimitPrice) || !CompareDouble(lowerLimitPrice, other.lowerLimitPrice))
+    // {
+    //     LOG_WARN("self:%s, other:%s", ToString().c_str(), other.ToString().c_str());
+    //     return false;
+    // }
 
     // if (!CompareDouble(highestPrice, other.highestPrice) || !CompareDouble(lowestPrice, other.lowestPrice || !CompareDouble(preClosePrice, other.preClosePrice)))
     // {

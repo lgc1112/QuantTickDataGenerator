@@ -1,9 +1,9 @@
 /*
  * @file: 
- * @Author: regangcli
+ * @Author: ligengchao
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2024-09-16 08:51:43
- * @edit: regangcli
+ * @edit: ligengchao
  * @brief: 
  */
 #include <cstdio>
@@ -43,11 +43,8 @@ void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
          << "OpenInterest,UpperLimitPrice,LowerLimitPrice,HighestPrice,LowestPrice,PreClosePrice\n";
 
     // 遍历数组并写入每个快照
-    for (const auto &snapshot : snapShorts_)
+    for (const auto &snapshot : snapshots_)
     {
-        auto upperLimitPrice_ = std::round(preClosePrice_ * 1.2 * 1000) / 1000.0;
-        auto lowerLimitPrice_ = std::round(preClosePrice_ * 0.8 * 1000) / 1000.0;
-        
         file << "SZ127080"
              << "," << 20230619 << "," << snapshot.updateTime << "," << std::setw(3) << std::setfill('0')
              << snapshot.updateMillisec << ","
@@ -69,7 +66,13 @@ void TransactionMgr::DumpSnapshotToFile(const std::string &filename)
     file.close();
 }
 
-int count = 0;
+void TransactionMgr::SetPreClosePrice(double price)
+{
+    preClosePrice_ = price;
+    upperLimitPrice_ = std::round(preClosePrice_ * 1.2 * 1000) / 1000.0;
+    lowerLimitPrice_ = std::round(preClosePrice_ * 0.8 * 1000) / 1000.0;
+}
+
 void TransactionMgr::OnReceiveOrder(void *data)
 {
     auto order = static_cast<Order *>(data);
@@ -149,13 +152,13 @@ void TransactionMgr::OnReceiveTransaction(void *data)
             // if (++count >= 10)
             //     return;
 
-            LOG_INFO("tickTimeSpan_: %d(%02d:%02d:%02d), transaction:[%s], pendingTransactions: %lu",
-                     tickTimeSpan_,
-                     tickTimeSpan_ / 3600,
-                     tickTimeSpan_ / 60 % 60,
-                     tickTimeSpan_ % 60,
-                     transaction->ToString().c_str(),
-                     pendingTransactions_.size());
+            // LOG_INFO("tickTimeSpan_: %d(%02d:%02d:%02d), transaction:[%s], pendingTransactions: %lu",
+            //          tickTimeSpan_,
+            //          tickTimeSpan_ / 3600,
+            //          tickTimeSpan_ / 60 % 60,
+            //          tickTimeSpan_ % 60,
+            //          transaction->ToString().c_str(),
+            //          pendingTransactions_.size());
             tickTimeSpan_ = nextTick;
             OnTick(tickTimeSpan_);
             nextTick = _GetNextTickTimeSpan();
@@ -308,14 +311,14 @@ void TransactionMgr::OnReceiveTransaction(void *data)
         auto lastPrice = transaction->orderPrice;
         auto turnover = transaction->orderPrice * transVolume;
 
-        auto &snapShot = snapShorts_.back();
-        snapShot.lastPrice = lastPrice;
-        snapShot.volume += transVolume;
-        snapShot.lastVolume += transVolume;
-        snapShot.turnover += turnover;
-        snapShot.lastTurnover += turnover;
-        snapShot.highestPrice = std::max(snapShot.highestPrice, lastPrice);
-        snapShot.lowestPrice = std::min(snapShot.lowestPrice, lastPrice);
+        auto &snapshot = snapshots_.back();
+        snapshot.lastPrice = lastPrice;
+        snapshot.volume += transVolume;
+        snapshot.lastVolume += transVolume;
+        snapshot.turnover += turnover;
+        snapshot.lastTurnover += turnover;
+        snapshot.highestPrice = std::max(snapshot.highestPrice, lastPrice);
+        snapshot.lowestPrice = std::min(snapshot.lowestPrice, lastPrice);
     }
 
     // std::cout << count << "Recv Transaction : " << transaction->ToString() << std::endl;
@@ -325,14 +328,10 @@ void TransactionMgr::OnReceiveTransaction(void *data)
 
 void TransactionMgr::OnTick(int tickTimeSpan)
 {
-    static int count = 0;
-    if (++count >= 50000)
-        return;
-
     // 更新快照
-    auto &snapShot = snapShorts_.back();
-    sprintf(snapShot.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan % 60);
-    // LOG_INFO("tickTimeSpan: %d, %d, %s", tickTimeSpan, tickTimeSpan % 60, snapShot.updateTime);
+    auto &snapshot = snapshots_.back();
+    sprintf(snapshot.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan % 60);
+    // LOG_INFO("tickTimeSpan: %d, %d, %s", tickTimeSpan, tickTimeSpan % 60, snapshot.updateTime);
 
     // if (curOrders_.size() != buyOrders_.size() + sellOrders_.size())
     //     LOG_ERROR("curOrders_ size: %lu, buyOrders_ size + sellOrders_ size: %lu",
@@ -389,45 +388,49 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     }
 
     // 保存到快照
-    snapShot.askPrice1 = min5SellPrices_[0].first;
-    snapShot.askVolume1 = min5SellPrices_[0].second;
-    snapShot.askPrice2 = min5SellPrices_[1].first;
-    snapShot.askVolume2 = min5SellPrices_[1].second;
-    snapShot.askPrice3 = min5SellPrices_[2].first;
-    snapShot.askVolume3 = min5SellPrices_[2].second;
-    snapShot.askPrice4 = min5SellPrices_[3].first;
-    snapShot.askVolume4 = min5SellPrices_[3].second;
-    snapShot.askPrice5 = min5SellPrices_[4].first;
-    snapShot.askVolume5 = min5SellPrices_[4].second;
+    snapshot.askPrice1 = min5SellPrices_[0].first;
+    snapshot.askVolume1 = min5SellPrices_[0].second;
+    snapshot.askPrice2 = min5SellPrices_[1].first;
+    snapshot.askVolume2 = min5SellPrices_[1].second;
+    snapshot.askPrice3 = min5SellPrices_[2].first;
+    snapshot.askVolume3 = min5SellPrices_[2].second;
+    snapshot.askPrice4 = min5SellPrices_[3].first;
+    snapshot.askVolume4 = min5SellPrices_[3].second;
+    snapshot.askPrice5 = min5SellPrices_[4].first;
+    snapshot.askVolume5 = min5SellPrices_[4].second;
 
-    snapShot.bidPrice1 = max5BuyPrices_[0].first;
-    snapShot.bidVolume1 = max5BuyPrices_[0].second;
-    snapShot.bidPrice2 = max5BuyPrices_[1].first;
-    snapShot.bidVolume2 = max5BuyPrices_[1].second;
-    snapShot.bidPrice3 = max5BuyPrices_[2].first;
-    snapShot.bidVolume3 = max5BuyPrices_[2].second;
-    snapShot.bidPrice4 = max5BuyPrices_[3].first;
-    snapShot.bidVolume4 = max5BuyPrices_[3].second;
-    snapShot.bidPrice5 = max5BuyPrices_[4].first;
-    snapShot.bidVolume5 = max5BuyPrices_[4].second;
+    snapshot.bidPrice1 = max5BuyPrices_[0].first;
+    snapshot.bidVolume1 = max5BuyPrices_[0].second;
+    snapshot.bidPrice2 = max5BuyPrices_[1].first;
+    snapshot.bidVolume2 = max5BuyPrices_[1].second;
+    snapshot.bidPrice3 = max5BuyPrices_[2].first;
+    snapshot.bidVolume3 = max5BuyPrices_[2].second;
+    snapshot.bidPrice4 = max5BuyPrices_[3].first;
+    snapshot.bidVolume4 = max5BuyPrices_[3].second;
+    snapshot.bidPrice5 = max5BuyPrices_[4].first;
+    snapshot.bidVolume5 = max5BuyPrices_[4].second;
 
-    int size = snapShorts_.size();
-    if (snapShorts_[size - 2].Compare(snapShot))
+    int size = snapshots_.size();
+    // 去重
+    if (snapshots_[size - 2].Compare(snapshot))
     {
-        LOG_INFO("snapShorts_[size - 2] == snapShorts_[size - 1], size: %lu", size);
+        // LOG_INFO("snapshots_[size - 2] == snapshots_[size - 1], size: %lu", size);
         return;
     }
 
     // 保存快照信息
-    auto highestPrice = snapShot.highestPrice;
-    auto lowestPrice = snapShot.lowestPrice;
-    auto lastPrice = snapShot.lastPrice;
-    auto volume = snapShot.volume;
-    auto turnover = snapShot.turnover;
+    auto highestPrice = snapshot.highestPrice;
+    auto lowestPrice = snapshot.lowestPrice;
+    auto lastPrice = snapshot.lastPrice;
+    auto volume = snapshot.volume;
+    auto turnover = snapshot.turnover;
+
+    // // 保存到map
+    // snapshotsMap_[volume].emplace_back(&snapshot);
 
     // 切换到下一个快照
-    snapShorts_.emplace_back();
-    auto &lastSnapShort = snapShorts_.back();
+    snapshots_.emplace_back();
+    auto &lastSnapShort = snapshots_.back();
     lastSnapShort.highestPrice = highestPrice;
     lastSnapShort.lowestPrice = lowestPrice;
     lastSnapShort.lastPrice = lastPrice;

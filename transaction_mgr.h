@@ -1,9 +1,9 @@
 /*
  * @file: 
- * @Author: regangcli
+ * @Author: ligengchao
  * @copyright: Tencent Technology (Shenzhen) Company Limited
  * @Date: 2024-09-16 08:52:00
- * @edit: regangcli
+ * @edit: ligengchao
  * @brief: 
  */
 #pragma once
@@ -21,7 +21,7 @@ class TransactionMgr
 {
 public:
     TransactionMgr()
-    : snapShorts_(2)
+    : snapshots_(2)
     {
     }
     ~TransactionMgr() = default;
@@ -29,9 +29,13 @@ public:
     // 将快照数据写入文件
     void DumpSnapshotToFile(const std::string &path);
     // 获取快照数量
-    int GetSnapshotNum() { return snapShorts_.size(); };
+    int GetSnapshotNum() { return snapshots_.size(); }
+    // 获取快照
+    const std::vector<RawSnapshot> &GetSnapshot() const { return snapshots_; }
+    // 获取快照Map
+    std::unordered_map<int64_t, std::vector<RawSnapshot *>> &GetSnapshotMap() { return snapshotsMap_; };
     // 设置preClosePrice
-    void SetPreClosePrice(double price) { preClosePrice_ = price; }
+    void SetPreClosePrice(double price);
 
     // 接收order回调
     void OnReceiveOrder(void *data);
@@ -49,7 +53,12 @@ private:
     std::multiset<Order *, OrderCompare> sellOrders_; // 卖出订单有序集合(从小到大)
 
     std::unordered_map<int64_t, std::vector<Transaction *>> pendingTransactions_;
-    std::vector<RawSnapShot> snapShorts_;
+
+    std::vector<RawSnapshot> snapshots_;
+    std::unordered_map<int64_t, std::vector<RawSnapshot *>> snapshotsMap_;
+
     int tickTimeSpan_ = 0;
     double preClosePrice_ = 0;
+    double upperLimitPrice_ = 0;
+    double lowerLimitPrice_ = 0;
 };

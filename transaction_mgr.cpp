@@ -82,15 +82,12 @@ void TransactionMgr::OnReceiveOrder(void *data)
 {
     auto order = static_cast<Order *>(data);
 
-    int secondsInDay = (order->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
-    OnTick(secondsInDay);
-
     auto orderID = order->orderID;
-    if (curOrders_.find(orderID) != curOrders_.end())
-    {
-        LOG_ERROR1("order id error");
-        return;
-    }
+    // if (curOrders_.find(orderID) != curOrders_.end())
+    // {
+    //     LOG_ERROR1("order id error");
+    //     return;
+    // }
 
     if (order->isBuy)
         order->buyOrdersIter = buyOrders_.emplace(order);
@@ -114,28 +111,15 @@ void TransactionMgr::OnReceiveOrder(void *data)
 
         pendingTransactions_.erase(it);
     }
+
+    int secondsInDay = (order->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
+    if (order->orderPrice > max5BuyPrices_[4].first || order->orderPrice < min5SellPrices_[4].first)
+        OnTick(secondsInDay);
 }
 
 void TransactionMgr::OnReceiveTransaction(void *data)
 {
     auto transaction = static_cast<Transaction *>(data);
-
-    int secondsInDay = (transaction->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
-    int nextTick = _GetNextTickTimeSpan();
-    // tick跨帧时，需要通过_GetNextTickTimeSpan进行追帧
-    if (secondsInDay >= nextTick)
-    {
-        while (secondsInDay >= nextTick)
-        {
-            tickTimeSpan_ = nextTick;
-            OnTick(tickTimeSpan_);
-            nextTick = _GetNextTickTimeSpan();
-        }
-    }
-    else
-    {
-        OnTick(secondsInDay);
-    }
 
     auto askOrderID = transaction->askOrderID;
     auto bidOrderID = transaction->bidOrderID;
@@ -283,6 +267,25 @@ void TransactionMgr::OnReceiveTransaction(void *data)
         snapshot.highestPrice = std::max(snapshot.highestPrice, lastPrice);
         snapshot.lowestPrice = std::min(snapshot.lowestPrice, lastPrice);
     }
+    
+    // if (transaction->orderPrice > )
+
+    int secondsInDay = (transaction->updateTimeSpan / 1000000 + 8 * 3600) % 86400;
+    int nextTick = _GetNextTickTimeSpan();
+    // tick跨帧时，需要通过_GetNextTickTimeSpan进行追帧
+    if (secondsInDay >= nextTick)
+    {
+        while (secondsInDay >= nextTick)
+        {
+            tickTimeSpan_ = nextTick;
+            OnTick(tickTimeSpan_);
+            nextTick = _GetNextTickTimeSpan();
+        }
+    }
+    else
+    {
+        OnTick(secondsInDay);
+    }
 }
 
 void TransactionMgr::OnTick(int tickTimeSpan)
@@ -292,9 +295,10 @@ void TransactionMgr::OnTick(int tickTimeSpan)
     sprintf(snapshot.updateTime, "%02d:%02d:%02d", tickTimeSpan / 3600, tickTimeSpan / 60 % 60, tickTimeSpan % 60);
     // LOG_INFO("tickTimeSpan: %d, %d, %s", tickTimeSpan, tickTimeSpan % 60, snapshot.updateTime);
     
-    std::array<std::pair<double, int64_t>, 5> max5BuyPrices_;  // {prices : volume}
-    std::array<std::pair<double, int64_t>, 5> min5SellPrices_; // {prices : volume}
     int idx = 0;
+    std::fill(max5BuyPrices_.begin(), max5BuyPrices_.end(), std::pair<double, int64_t>{0, 0});
+    std::fill(min5SellPrices_.begin(), min5SellPrices_.end(), std::pair<double, int64_t>{0, 0});
+
     for (auto it = buyOrders_.rbegin(); it != buyOrders_.rend(); it++)
     {
         auto prices = (*it)->orderPrice;

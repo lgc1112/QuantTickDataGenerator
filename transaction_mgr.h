@@ -60,6 +60,9 @@ private:
 
     std::vector<RawSnapshot> snapshots_;
     std::unordered_map<int64_t, std::vector<RawSnapshot *>> snapshotsMap_;
+    
+    std::array<std::pair<double, int64_t>, 5> max5BuyPrices_;  // {prices : volume}
+    std::array<std::pair<double, int64_t>, 5> min5SellPrices_; // {prices : volume}
 
     int tickTimeSpan_ = 0;
     double preClosePrice_ = 0;
